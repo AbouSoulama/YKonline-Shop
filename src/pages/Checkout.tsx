@@ -3,11 +3,45 @@ import { Link } from "react-router-dom";
 import { ShieldCheck, Truck, CreditCard, Check, ChevronLeft, Lock } from "lucide-react";
 import { useCart, formatPrice } from "../context/CartContext";
 
+const PAYMENT_METHODS = [
+  {
+    id: "card",
+    label: "Credit Card",
+    logo: (
+      <svg viewBox="0 0 48 32" className="h-8 w-12" aria-hidden="true">
+        <rect width="48" height="32" rx="4" fill="#1A1F71" />
+        <text x="24" y="20" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">VISA</text>
+      </svg>
+    ),
+  },
+  {
+    id: "paypal",
+    label: "PayPal",
+    logo: (
+      <svg viewBox="0 0 48 32" className="h-8 w-12" aria-hidden="true">
+        <rect width="48" height="32" rx="4" fill="#003087" />
+        <text x="24" y="14" textAnchor="middle" fill="#009CDE" fontSize="8" fontWeight="bold" fontFamily="Arial">Pay</text>
+        <text x="24" y="24" textAnchor="middle" fill="#012169" fontSize="8" fontWeight="bold" fontFamily="Arial">Pal</text>
+      </svg>
+    ),
+  },
+  {
+    id: "stripe",
+    label: "Stripe",
+    logo: (
+      <svg viewBox="0 0 48 32" className="h-8 w-12" aria-hidden="true">
+        <rect width="48" height="32" rx="4" fill="#635BFF" />
+        <text x="24" y="20" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="Arial">stripe</text>
+      </svg>
+    ),
+  },
+] as const;
+
 export default function Checkout() {
   const { items, subtotal, discount, shipping, total, clearCart, setIsOpen } = useCart();
   const [step, setStep] = useState(1);
   const [placed, setPlaced] = useState(false);
-  const [payment, setPayment] = useState("card");
+  const [payment, setPayment] = useState<(typeof PAYMENT_METHODS)[number]["id"]>("card");
 
   if (items.length === 0 && !placed) {
     return (
@@ -74,7 +108,6 @@ export default function Checkout() {
                 <div><label className="block text-sm font-semibold mb-1">Last name</label><input required type="text" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
                 <div className="sm:col-span-2"><label className="block text-sm font-semibold mb-1">Address</label><input required type="text" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
                 <div><label className="block text-sm font-semibold mb-1">City</label><input required type="text" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
-                <div><label className="block text-sm font-semibold mb-1">Postal code</label><input required type="text" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
                 <div className="sm:col-span-2"><label className="block text-sm font-semibold mb-1">Country</label><input required type="text" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
               </div>
             </div>
@@ -105,17 +138,16 @@ export default function Checkout() {
           {step === 3 && (
             <div className="bg-white rounded-3xl p-6 md:p-8 card-shadow border border-cream">
               <h2 className="font-display text-2xl font-bold mb-5">Payment method</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                {[
-                  { id: "card", l: "Credit Card", i: "Card" },
-                  { id: "paypal", l: "PayPal", i: "Pay" },
-                  { id: "apple", l: "Apple Pay", i: "Apple" },
-                  { id: "google", l: "Google Pay", i: "G Pay" },
-                  { id: "mobile", l: "Mobile Money", i: "Mobile" },
-                  { id: "transfer", l: "Bank Transfer", i: "Bank" },
-                ].map((p) => (
-                  <button type="button" key={p.id} onClick={() => setPayment(p.id)} className={`p-4 rounded-2xl border text-sm font-semibold transition-colors ${payment === p.id ? "border-green bg-green-light/30 text-green" : "border-cream text-gray-600 hover:border-green"}`}>
-                    <div className="text-xl mb-1">{p.i}</div>{p.l}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                {PAYMENT_METHODS.map((p) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    onClick={() => setPayment(p.id)}
+                    className={`flex flex-col items-center gap-3 rounded-2xl border p-4 text-sm font-semibold transition-colors ${payment === p.id ? "border-green bg-green-light/30 text-green" : "border-cream text-gray-600 hover:border-green"}`}
+                  >
+                    {p.logo}
+                    {p.label}
                   </button>
                 ))}
               </div>
@@ -125,6 +157,16 @@ export default function Checkout() {
                   <div><label className="block text-sm font-semibold mb-1">Expiry</label><input required type="text" placeholder="MM/YY" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
                   <div><label className="block text-sm font-semibold mb-1">CVC</label><input required type="text" placeholder="123" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
                 </div>
+              )}
+              {payment === "paypal" && (
+                <p className="rounded-2xl bg-cream/40 p-4 text-sm text-gray-600">
+                  You will be redirected to PayPal to complete your payment securely.
+                </p>
+              )}
+              {payment === "stripe" && (
+                <p className="rounded-2xl bg-cream/40 p-4 text-sm text-gray-600">
+                  Your payment will be processed securely via Stripe.
+                </p>
               )}
               <div className="mt-6 flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> Your payment information is encrypted and secure.</div>
             </div>
@@ -136,7 +178,6 @@ export default function Checkout() {
           </div>
         </form>
 
-        {/* Summary */}
         <aside className="bg-cream/40 rounded-3xl p-6 h-fit lg:sticky lg:top-32">
           <h3 className="font-display font-bold text-lg mb-4">Order summary</h3>
           <div className="space-y-3 mb-4 max-h-80 overflow-y-auto">
@@ -166,7 +207,7 @@ export default function Checkout() {
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
             <div className="flex items-center gap-1"><ShieldCheck size={14} className="text-green" /> Secure payment</div>
             <div className="flex items-center gap-1"><Truck size={14} className="text-green" /> Fast shipping</div>
-            <div className="flex items-center gap-1"><CreditCard size={14} className="text-green" /> Multiple methods</div>
+            <div className="flex items-center gap-1"><CreditCard size={14} className="text-green" /> Stripe & PayPal</div>
             <div className="flex items-center gap-1"><Check size={14} className="text-green" /> Satisfaction</div>
           </div>
         </aside>

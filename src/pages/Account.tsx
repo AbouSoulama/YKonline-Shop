@@ -1,12 +1,12 @@
 import { useState, useRef } from "react";
 import { Mail, Lock, User, Package, MapPin, Heart, LogOut, Eye, EyeOff, ShoppingCart, ChevronRight, Settings, Bell, AlertCircle, CheckCircle, Star, MessageSquare, Send } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, confirmLogout } from "../context/AuthContext";
 import { useReviews } from "../context/ReviewContext";
-import { products as allProducts } from "../data/products";
+import { useProducts } from "../context/ProductsContext";
 
 export default function Account() {
-  const { user, login, register, logout } = useAuth();
+  const { user, login, register, logout, loading } = useAuth();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -14,6 +14,7 @@ export default function Account() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "orders" | "addresses" | "wishlist" | "reviews" | "settings">("overview");
+  const { products: allProducts } = useProducts();
   const { reviews: allReviews, addReview } = useReviews();
   const myReviews = allReviews.filter(r => r.customer === user?.name);
   const [reviewProduct, setReviewProduct] = useState("");
@@ -44,7 +45,7 @@ export default function Account() {
 
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -54,14 +55,14 @@ export default function Account() {
 
     if (mode === "register") {
       const name = nameRef.current?.value || "";
-      const result = register(name, email, password);
+      const result = await register(name, email, password);
       if (!result.success) {
         setError(result.error);
         return;
       }
-      setSuccess("Account created successfully! Welcome to YKonline Shop.");
+      setSuccess(result.error || "Account created successfully! Welcome to YKonline Shop.");
     } else {
-      const result = login(email, password);
+      const result = await login(email, password);
       if (!result.success) {
         setError(result.error);
         return;
@@ -73,10 +74,19 @@ export default function Account() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    if (!confirmLogout()) return;
+    await logout();
     setActiveTab("overview");
   };
+
+  if (loading) {
+    return (
+      <div className="container-page py-24 text-center text-gray-500">
+        Loading your account...
+      </div>
+    );
+  }
 
   // If user is logged in as admin, redirect to admin
   if (user?.role === "admin") {
@@ -326,11 +336,11 @@ export default function Account() {
                   </div>
                 )}
 
-                <form onSubmit={(e) => {
+                <form onSubmit={async (e) => {
                   e.preventDefault();
-                  if (!reviewProduct || !reviewText.trim()) return;
+                  if (!reviewProduct || !reviewText.trim() || !user) return;
                   const prod = allProducts.find(p => p.id === reviewProduct);
-                  addReview({
+                  await addReview({
                     customer: user.name || "Customer",
                     product: prod ? `${prod.name} - ${prod.size}` : reviewProduct,
                     productId: reviewProduct,
@@ -485,11 +495,14 @@ export default function Account() {
             <label className="block text-sm font-semibold mb-1 text-gray-700">Password</label>
             <div className="relative">
               <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input ref={pwdRef} required type={showPwd ? "text" : "password"} minLength={mode === "register" ? 6 : undefined} className="w-full pl-11 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" placeholder={mode === "register" ? "Minimum 6 characters" : "Enter your password"} />
+              <input ref={pwdRef} required type={showPwd ? "text" : "password"} minLength={mode === "register" ? 8 : undefined} className="w-full pl-11 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" placeholder={mode === "register" ? "Min. 8 characters" : "Enter your password"} />
               <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green" aria-label="Toggle password">
                 {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {mode === "register" && (
+              <p className="mt-2 text-xs text-gray-500">At least 8 characters, with uppercase, lowercase and a number.</p>
+            )}
           </div>
           <button type="submit" className="btn-primary w-full">{mode === "login" ? "Log in" : "Create my account"}</button>
         </form>

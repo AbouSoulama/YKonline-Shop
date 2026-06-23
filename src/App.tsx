@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ReviewProvider } from "./context/ReviewContext";
+import { ProductsProvider } from "./context/ProductsContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -71,6 +72,7 @@ export default function App() {
   return (
     <HashRouter>
       <AuthProvider>
+      <ProductsProvider>
       <ReviewProvider>
       <CartProvider>
         <ScrollToTop />
@@ -80,6 +82,7 @@ export default function App() {
         </Routes>
       </CartProvider>
       </ReviewProvider>
+      </ProductsProvider>
       </AuthProvider>
     </HashRouter>
   );

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Minus, Plus, ShoppingCart, Truck, ShieldCheck, RotateCcw, Star, Check, ChevronRight, Heart, Share2 } from "lucide-react";
-import { getProductById, getRelatedProducts } from "../data/products";
-import { useCart, formatPrice, FREE_SHIPPING_AMOUNT } from "../context/CartContext";
+import { useProducts } from "../context/ProductsContext";
 import { useReviews } from "../context/ReviewContext";
+import { useCart, formatPrice, FREE_SHIPPING_AMOUNT } from "../context/CartContext";
 import ProductCard from "../components/ProductCard";
 
 export default function Product() {
   const { id } = useParams();
+  const { getProductById, getRelatedProducts } = useProducts();
   const product = getProductById(id || "");
   const { getProductReviews } = useReviews();
   const productReviews = getProductReviews(id || "");

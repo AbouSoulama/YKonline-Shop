@@ -1,4 +1,5 @@
 import { Calendar, ArrowRight, User, Clock } from "lucide-react";
+import SubscribeForm from "../components/SubscribeForm";
 
 const posts = [
   {
@@ -115,10 +116,7 @@ export default function Blog() {
         <div className="rounded-[2.5rem] bg-cream p-10 md:p-14 text-center">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-3">Never miss an article</h2>
           <p className="text-gray-600 mb-6 max-w-2xl mx-auto">Subscribe to our newsletter to receive our latest natural beauty tips directly in your inbox.</p>
-          <form onSubmit={(e) => { e.preventDefault(); alert("Thank you!"); }} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
-            <input type="email" required placeholder="Your email address" className="flex-1 px-5 py-3 rounded-full border border-cream bg-white focus:outline-none focus:border-green" />
-            <button type="submit" className="btn-primary">Subscribe</button>
-          </form>
+          <SubscribeForm tone="light" layout="row" className="max-w-xl mx-auto" inputClassName="flex-1 px-5 py-3 rounded-full border border-cream bg-white focus:outline-none focus:border-green" buttonClassName="btn-primary" />
         </div>
       </section>
     </div>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, Grid, List } from "lucide-react";
 import ProductCard from "../components/ProductCard";
-import { products } from "../data/products";
+import { useProducts } from "../context/ProductsContext";
 
 const sizes = ["All", "100g", "250g", "500g", "150ml", "Set", "Pack"];
 const types: ("All" | "Raw" | "Whipped" | "Set")[] = ["All", "Raw", "Whipped", "Set"];
@@ -15,6 +15,7 @@ const sorts = [
 ];
 
 export default function Shop() {
+  const { products } = useProducts();
   const [size, setSize] = useState("All");
   const [type, setType] = useState<(typeof types)[number]>("All");
   const [usage, setUsage] = useState("All");

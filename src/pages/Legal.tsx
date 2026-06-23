@@ -1,20 +1,21 @@
 import { Link } from "react-router-dom";
+import { SITE_EMAIL } from "../constants/site";
 
 interface Section { title: string; body: string[] }
 
 const sections: Record<string, Section[]> = {
   legal: [
-    { title: "Publisher", body: ["YKonline Shop - Online store specializing in premium organic shea butter.", "Contact: hello@ykonlineshop.com"] },
+    { title: "Publisher", body: ["YKonline Shop - Online store specializing in premium organic shea butter.", `Contact: ${SITE_EMAIL}`] },
     { title: "Director of publication", body: ["The director of publication is the founder of YKonline Shop."] },
     { title: "Hosting", body: ["This website is hosted by a professional hosting provider. Contact details can be provided on request."] },
     { title: "Intellectual property", body: ["All content (text, images, logos) on this site is the exclusive property of YKonline Shop, except where otherwise noted. Any reproduction without permission is prohibited."] },
-    { title: "Contact", body: ["For any question relating to this legal notice, you can contact us at hello@ykonlineshop.com or via our contact page."] },
+    { title: "Contact", body: [`For any question relating to this legal notice, you can contact us at ${SITE_EMAIL} or via our contact page.`] },
   ],
   terms: [
     { title: "Purpose", body: ["These general terms and conditions govern the use of the YKonline Shop website and the purchase of products offered on the site."] },
     { title: "Orders", body: ["Any order implies acceptance without reservation of these terms and conditions. Orders are confirmed after validation of payment and availability of products."] },
     { title: "Prices", body: ["Prices are displayed in US dollars, all taxes included, excluding shipping costs. Shipping costs are specified before payment confirmation."] },
-    { title: "Payment", body: ["Payment is due at the time of ordering. We accept credit cards, PayPal, Apple Pay, Google Pay, mobile money and bank transfer. All payments are secured by SSL encryption."] },
+    { title: "Payment", body: ["Payment is due at the time of ordering. We accept credit cards, PayPal and Stripe. All payments are secured by SSL encryption."] },
     { title: "Delivery", body: ["Orders are prepared and shipped within 24 to 48 hours. Delivery times vary according to destination. Shipping is free for orders above $50."] },
     { title: "Right of withdrawal", body: ["You have 14 days from receipt of your order to return any unopened product in its original condition. The refund is made within 14 days of receipt of the return."] },
     { title: "Liability", body: ["YKonline Shop cannot be held responsible for misuse of products. Our products are cosmetic care products and in no case constitute medical treatment."] },
@@ -24,7 +25,7 @@ const sections: Record<string, Section[]> = {
     { title: "Use of data", body: ["Your data is used to process your orders, ensure delivery, manage your customer account, send you our newsletter (if you have subscribed), and improve our services."] },
     { title: "Data retention", body: ["Your data is kept for the time necessary to provide our services and to meet our legal obligations. You can request the deletion of your data at any time."] },
     { title: "Data security", body: ["We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, modification, disclosure or destruction."] },
-    { title: "Your rights", body: ["You have the right to access, rectify, delete and port your data, as well as the right to object and limit processing. To exercise these rights, contact us at hello@ykonlineshop.com."] },
+    { title: "Your rights", body: [`You have the right to access, rectify, delete and port your data, as well as the right to object and limit processing. To exercise these rights, contact us at ${SITE_EMAIL}.`] },
     { title: "Cookies", body: ["We use cookies to improve your browsing experience and analyze our traffic. You can manage your cookie preferences at any time from your browser."] },
   ],
   cookies: [

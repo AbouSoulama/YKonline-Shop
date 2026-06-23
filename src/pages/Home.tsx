@@ -2,7 +2,8 @@ import { Leaf, Sparkles, Heart, ShieldCheck, Droplets, Hand, Sun, Star, ArrowRig
 import { Link } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import ProductCard from "../components/ProductCard";
-import { products } from "../data/products";
+import SubscribeForm from "../components/SubscribeForm";
+import { useProducts } from "../context/ProductsContext";
 import { useReviews } from "../context/ReviewContext";
 
 const benefits = [
@@ -31,6 +32,7 @@ const commitments = [
 ];
 
 export default function Home() {
+  const { products } = useProducts();
   const featured = products.slice(0, 4);
   const { getHomepageReviews } = useReviews();
   const reviews = getHomepageReviews();
@@ -189,15 +191,12 @@ export default function Home() {
               <h2 className="font-display text-3xl md:text-4xl font-bold mb-3">Join the YKonline Shop community</h2>
               <p className="text-white/90">Receive our natural beauty tips, exclusive offers and new products.</p>
             </div>
-            <form
-              onSubmit={(e) => { e.preventDefault(); alert("Thank you for subscribing!"); }}
-              className="flex flex-col sm:flex-row gap-3 bg-white rounded-full p-2 shadow-xl"
-            >
-              <input type="email" required placeholder="Your email address" className="flex-1 px-5 py-3 rounded-full text-gray-800 focus:outline-none" />
-              <button type="submit" className="bg-green hover:bg-green-dark text-white font-semibold px-6 py-3 rounded-full transition-colors whitespace-nowrap">
-                Subscribe
-              </button>
-            </form>
+            <SubscribeForm
+              layout="row"
+              className="bg-white rounded-full p-2 shadow-xl"
+              inputClassName="flex-1 px-5 py-3 rounded-full text-gray-800 focus:outline-none"
+              buttonClassName="bg-green hover:bg-green-dark text-white font-semibold px-6 py-3 rounded-full transition-colors whitespace-nowrap"
+            />
           </div>
         </div>
       </section>
@@ -209,6 +208,7 @@ export default function Home() {
 import type { Review } from "../context/ReviewContext";
 
 function ReviewsCarousel({ reviews }: { reviews: Review[] }) {
+  const { approvedReviews } = useReviews();
   const [current, setCurrent] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const total = reviews.length;
@@ -259,6 +259,28 @@ function ReviewsCarousel({ reviews }: { reviews: Review[] }) {
   };
 
   const visible = getVisibleReviews();
+
+  const stats = (() => {
+    const approved = approvedReviews;
+    const count = approved.length;
+    if (count === 0) {
+      return [
+        { value: "—", label: "Average rating" },
+        { value: "0", label: "Verified reviews" },
+        { value: "—", label: "Would recommend" },
+        { value: "0", label: "Happy customers" },
+      ];
+    }
+    const avg = approved.reduce((sum, r) => sum + r.rating, 0) / count;
+    const recommend = Math.round((approved.filter(r => r.rating >= 4).length / count) * 100);
+    const uniqueCustomers = new Set(approved.map(r => r.customer)).size;
+    return [
+      { value: `${avg.toFixed(1)}/5`, label: "Average rating" },
+      { value: `${count}+`, label: "Verified reviews" },
+      { value: `${recommend}%`, label: "Would recommend" },
+      { value: `${uniqueCustomers}+`, label: "Happy customers" },
+    ];
+  })();
 
   return (
     <section className="relative overflow-hidden bg-cream py-20 md:py-28">
@@ -332,12 +354,7 @@ function ReviewsCarousel({ reviews }: { reviews: Review[] }) {
 
         {/* Stats bar */}
         <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { value: "4.9/5", label: "Average rating" },
-            { value: `${total}+`, label: "Verified reviews" },
-            { value: "98%", label: "Would recommend" },
-            { value: "1,200+", label: "Happy customers" },
-          ].map((s) => (
+          {stats.map((s) => (
             <div key={s.label} className="rounded-2xl border border-green/10 bg-white p-5 text-center shadow-sm">
               <p className="font-display text-2xl md:text-3xl font-extrabold text-green">{s.value}</p>
               <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-gray-500">{s.label}</p>

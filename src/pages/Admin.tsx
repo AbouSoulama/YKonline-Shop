@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, Package, Users, ShoppingCart, Tag, FileText, Star, Settings, LogOut,
@@ -6,7 +6,8 @@ import {
   DollarSign, ShoppingBag, UserCheck, Check, AlertCircle,
   ArrowUpRight, ArrowDownRight, Leaf
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { SITE_EMAIL } from "../constants/site";
+import { useAuth, confirmLogout } from "../context/AuthContext";
 import { useReviews } from "../context/ReviewContext";
 
 // ── Types ──
@@ -83,7 +84,7 @@ const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 // ── Component ──
 export default function Admin() {
-  const { isAdmin, login, logout } = useAuth();
+  const { isAdmin, login, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
@@ -105,14 +106,18 @@ export default function Admin() {
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isAdmin) refreshUser();
+  }, [isAdmin, refreshUser]);
+
   // ── Login ──
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = login(email, pwd);
+    const result = await login(email, pwd);
     if (result.success && result.isAdmin) {
       setLoginErr("");
     } else {
-      setLoginErr("Invalid admin credentials. Please try again.");
+      setLoginErr(result.error || "Invalid admin credentials. Please try again.");
     }
   };
 
@@ -180,7 +185,7 @@ export default function Admin() {
             )}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Admin Email</label>
-              <input value={email} onChange={e => setEmail(e.target.value)} type="email" required placeholder="admin@ykonlineshop.com" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green" />
+              <input value={email} onChange={e => setEmail(e.target.value)} type="email" required placeholder={SITE_EMAIL} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green" />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
@@ -228,7 +233,7 @@ export default function Admin() {
           ))}
         </nav>
         <div className="p-4 border-t border-white/10">
-          <button onClick={() => { logout(); navigate("/"); }} className="w-full flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white/70 hover:text-red-400 hover:bg-white/5 transition-all">
+          <button onClick={async () => { if (confirmLogout()) { await logout(); navigate("/"); } }} className="w-full flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white/70 hover:text-red-400 hover:bg-white/5 transition-all">
             <LogOut size={20} /> Sign out
           </button>
         </div>
@@ -560,7 +565,7 @@ export default function Admin() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Store Email</label>
-                  <input defaultValue="hello@ykonlineshop.com" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
+                  <input defaultValue={SITE_EMAIL} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">WhatsApp Number</label>

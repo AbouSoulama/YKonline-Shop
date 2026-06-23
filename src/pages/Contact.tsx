@@ -1,8 +1,37 @@
-import { Mail, MapPin, MessageCircle, Clock, Send } from "lucide-react";
-import { useState } from "react";
+import { Mail, MapPin, MessageCircle, Clock, Send, AlertCircle } from "lucide-react";
+import { FormEvent, useState } from "react";
+import { SITE_EMAIL } from "../constants/site";
+import SocialLinks from "../components/SocialLinks";
+import { submitContactForm } from "../lib/contact";
 
 export default function Contact() {
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    subject: "Question about a product",
+    message: "",
+  });
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const result = await submitContactForm(form);
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.message);
+      return;
+    }
+
+    setSent(true);
+  };
+
   return (
     <div className="fade-in">
       <section className="bg-gradient-to-br from-cream to-orange-light py-16">
@@ -15,7 +44,7 @@ export default function Contact() {
 
       <section className="container-page py-16 grid md:grid-cols-3 gap-6">
         {[
-          { icon: Mail, title: "Email", value: "hello@ykonlineshop.com", desc: "Response within 24 hours" },
+          { icon: Mail, title: "Email", value: SITE_EMAIL, desc: "Response within 24 hours", href: `mailto:${SITE_EMAIL}` },
           { icon: MessageCircle, title: "WhatsApp", value: "Chat with us", desc: "Fast and friendly support", link: "https://wa.me/13012669830" },
           { icon: Clock, title: "Hours", value: "Mon - Sat, 9am - 6pm", desc: "Closed on Sundays" },
         ].map((c) => (
@@ -26,6 +55,8 @@ export default function Contact() {
             <h3 className="font-display font-semibold text-lg mb-1">{c.title}</h3>
             {c.link ? (
               <a href={c.link} target="_blank" rel="noreferrer" className="text-green font-semibold hover:text-orange">{c.value}</a>
+            ) : c.href ? (
+              <a href={c.href} className="text-green font-semibold hover:text-orange break-all">{c.value}</a>
             ) : (
               <p className="text-green font-semibold">{c.value}</p>
             )}
@@ -41,30 +72,32 @@ export default function Contact() {
           {sent ? (
             <div className="bg-green text-white rounded-2xl p-6 text-center">
               <h3 className="font-display font-semibold text-xl mb-2">Thank you for your message!</h3>
-              <p>Our team will respond within 24 hours.</p>
+              <p>Our team will respond within 24 hours at {SITE_EMAIL}.</p>
             </div>
           ) : (
-            <form
-              onSubmit={(e) => { e.preventDefault(); setSent(true); }}
-              className="space-y-4"
-            >
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+                  <AlertCircle size={18} className="shrink-0 mt-0.5" /> {error}
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-1 text-gray-700">First name</label>
-                  <input required type="text" className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green" />
+                  <input required type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-1 text-gray-700">Last name</label>
-                  <input required type="text" className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green" />
+                  <input required type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1 text-gray-700">Email</label>
-                <input required type="email" className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green" />
+                <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1 text-gray-700">Subject</label>
-                <select className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green">
+                <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green">
                   <option>Question about a product</option>
                   <option>Order tracking</option>
                   <option>Return or exchange</option>
@@ -74,9 +107,11 @@ export default function Contact() {
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1 text-gray-700">Your message</label>
-                <textarea required rows={5} className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green resize-none" />
+                <textarea required rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-white focus:outline-none focus:border-green resize-none" />
               </div>
-              <button type="submit" className="btn-primary w-full"><Send size={18} /> Send my message</button>
+              <button type="submit" disabled={loading} className="btn-primary w-full">
+                <Send size={18} /> {loading ? "Sending..." : "Send my message"}
+              </button>
             </form>
           )}
         </div>
@@ -98,11 +133,7 @@ export default function Contact() {
           <div className="bg-white rounded-3xl p-8 border border-cream card-shadow">
             <h3 className="font-display font-semibold text-xl mb-3">Follow us</h3>
             <p className="text-gray-600 text-sm mb-4">Join our community on social media for tips, inspirations and exclusive offers.</p>
-            <div className="flex gap-3">
-              {["Facebook", "Instagram", "Pinterest", "YouTube"].map((s) => (
-                <a key={s} href="#" className="w-11 h-11 rounded-full bg-green-light text-green hover:bg-green hover:text-white transition-colors flex items-center justify-center text-xs font-bold" aria-label={s}>{s[0]}</a>
-              ))}
-            </div>
+            <SocialLinks variant="light" />
           </div>
         </div>
       </section>
