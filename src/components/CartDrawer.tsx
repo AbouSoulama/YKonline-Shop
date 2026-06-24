@@ -4,14 +4,18 @@ import { useCart, formatPrice } from "../context/CartContext";
 import { useState } from "react";
 
 export default function CartDrawer() {
-  const { items, isOpen, setIsOpen, removeItem, updateQuantity, subtotal, discount, shipping, total, promoCode, setPromoCode, clearCart } = useCart();
-  const [applied, setApplied] = useState(false);
+  const { items, isOpen, setIsOpen, removeItem, updateQuantity, subtotal, discount, shipping, total, promoCode, setPromoCode, appliedPromo, applyPromo, clearPromo, clearCart } = useCart();
+  const [promoMsg, setPromoMsg] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
 
-  const handleApply = (e: React.FormEvent) => {
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.trim().toUpperCase() === "WELCOME10") {
-      setApplied(true);
-    }
+    setPromoLoading(true);
+    setPromoMsg("");
+    const err = await applyPromo();
+    if (err) setPromoMsg(err);
+    else setPromoMsg(`Discount applied with ${promoCode.toUpperCase()}`);
+    setPromoLoading(false);
   };
 
   return (
@@ -84,19 +88,19 @@ export default function CartDrawer() {
                   <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     value={promoCode}
-                    onChange={(e) => { setPromoCode(e.target.value); setApplied(false); }}
+                    onChange={(e) => { setPromoCode(e.target.value); setPromoMsg(""); if (appliedPromo) clearPromo(); }}
                     placeholder="Promo code"
                     className="w-full pl-9 pr-3 py-2.5 rounded-full border border-cream bg-cream/30 focus:outline-none focus:border-green text-sm"
                   />
                 </div>
-                <button type="submit" className="btn-accent !py-2.5 !px-5 text-sm">Apply</button>
+                <button type="submit" disabled={promoLoading} className="btn-accent !py-2.5 !px-5 text-sm">{promoLoading ? "..." : "Apply"}</button>
               </form>
-              {applied && <p className="text-green text-xs font-semibold">Discount applied with WELCOME10</p>}
+              {promoMsg && <p className={`text-xs font-semibold ${appliedPromo ? "text-green" : "text-red-500"}`}>{promoMsg}</p>}
             </div>
 
             <div className="border-t border-cream p-5 space-y-2 bg-cream/30">
               <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal</span><span className="font-semibold">{formatPrice(subtotal)}</span></div>
-              {discount > 0 && <div className="flex justify-between text-sm text-green"><span>Discount</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
+              {discount > 0 && <div className="flex justify-between text-sm text-green"><span>Discount ({appliedPromo?.code})</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
               <div className="flex justify-between text-sm"><span className="text-gray-600">Shipping</span><span className="font-semibold text-gray-400">At checkout</span></div>
               <div className="flex justify-between text-lg pt-2 border-t border-cream">
                 <span className="font-display font-semibold">Subtotal</span>

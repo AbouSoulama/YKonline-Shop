@@ -6,8 +6,9 @@ import { getStripePublishableKey } from "../lib/payments";
 import { markOrderPaid } from "../lib/orders";
 import { formatPrice } from "../context/CartContext";
 
-function CardForm({ orderId, total, onSuccess, onError }: {
+function CardForm({ orderId, orderNumber, total, onSuccess, onError }: {
   orderId: string;
+  orderNumber: string;
   total: number;
   onSuccess: () => void;
   onError: (msg: string) => void;
@@ -22,7 +23,7 @@ function CardForm({ orderId, total, onSuccess, onError }: {
 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: `${window.location.origin}/checkout/success?order=${orderId}` },
+      confirmParams: { return_url: `${window.location.origin}/checkout/success?order=${orderNumber}` },
       redirect: "if_required",
     });
 
@@ -33,7 +34,7 @@ function CardForm({ orderId, total, onSuccess, onError }: {
     }
 
     if (paymentIntent?.status === "succeeded") {
-      await markOrderPaid(orderId);
+      await markOrderPaid(orderId, undefined, "card");
       onSuccess();
     }
     setLoading(false);
@@ -50,9 +51,10 @@ function CardForm({ orderId, total, onSuccess, onError }: {
   );
 }
 
-export default function CardPayment({ clientSecret, orderId, total, onSuccess, onError }: {
+export default function CardPayment({ clientSecret, orderId, orderNumber, total, onSuccess, onError }: {
   clientSecret: string;
   orderId: string;
+  orderNumber: string;
   total: number;
   onSuccess: () => void;
   onError: (msg: string) => void;
@@ -64,7 +66,7 @@ export default function CardPayment({ clientSecret, orderId, total, onSuccess, o
 
   return (
     <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#0B6623" } } }}>
-      <CardForm orderId={orderId} total={total} onSuccess={onSuccess} onError={onError} />
+      <CardForm orderId={orderId} orderNumber={orderNumber} total={total} onSuccess={onSuccess} onError={onError} />
     </Elements>
   );
 }

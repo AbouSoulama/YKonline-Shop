@@ -1,39 +1,49 @@
-export function CreditCardLogo({ className = "h-10" }: { className?: string }) {
+function PaymentImg({ src, alt, className = "h-6", darkBg = false }: { src: string; alt: string; className?: string; darkBg?: boolean }) {
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
-      <svg viewBox="0 0 38 24" className="h-7" aria-label="Visa">
-        <rect width="38" height="24" rx="3" fill="#1A1F71" />
-        <text x="19" y="16" textAnchor="middle" fill="#FFFFFF" fontSize="9" fontWeight="bold" fontFamily="Arial,sans-serif">VISA</text>
-      </svg>
-      <svg viewBox="0 0 38 24" className="h-7" aria-label="Mastercard">
-        <rect width="38" height="24" rx="3" fill="#252525" />
-        <circle cx="15" cy="12" r="7" fill="#EB001B" />
-        <circle cx="23" cy="12" r="7" fill="#F79E1B" />
-      </svg>
-      <svg viewBox="0 0 38 24" className="h-7" aria-label="Amex">
-        <rect width="38" height="24" rx="3" fill="#2E77BC" />
-        <text x="19" y="15" textAnchor="middle" fill="#FFFFFF" fontSize="6" fontWeight="bold" fontFamily="Arial,sans-serif">AMEX</text>
-      </svg>
+    <div className={`inline-flex items-center justify-center rounded-md border px-2.5 py-1.5 shadow-sm ${darkBg ? "border-gray-800 bg-black" : "border-gray-200 bg-white"}`}>
+      <img src={src} alt={alt} className={`${className} w-auto max-w-none object-contain`} />
     </div>
   );
 }
 
-export function PayPalLogo({ className = "h-8" }: { className?: string }) {
+export function VisaLogo({ className = "h-6" }: { className?: string }) {
+  return <PaymentImg src="/payments/visa.svg" alt="Visa" className={className} />;
+}
+
+export function MastercardLogo({ className = "h-6" }: { className?: string }) {
+  return <PaymentImg src="/payments/mastercard.svg" alt="Mastercard" className={className} />;
+}
+
+export function AmexLogo({ className = "h-6" }: { className?: string }) {
+  return <PaymentImg src="/payments/amex.svg" alt="American Express" className={className} />;
+}
+
+export function CreditCardLogo({ className = "h-6" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 124 33" className={className} aria-label="PayPal">
-      <path fill="#003087" d="M46.2 6.7h-7.8c-.5 0-1 .4-1.1.9L34.6 26c-.1.5.3.9.8.9h3.7c.4 0 .7-.3.8-.7l.9-5.7c.1-.5.5-.9 1.1-.9h2.5c5.1 0 8.1-2.5 8.9-7.4.3-2.2 0-3.9-1-5.1-1.1-1.3-3-2-5.8-2.1zm.9 7.3c-.4 2.8-2.6 2.8-4.7 2.8h-1.2l.8-5.2c0-.3.3-.5.6-.5h.6c1.4 0 2.8 0 3.5.8.4.4.5 1.1.4 2.1z"/>
-      <path fill="#009CDE" d="M66.5 6.7H59c-.5 0-1 .4-1.1.9L54.9 26c-.1.5.3.9.8.9h3.5c.5 0 .9-.4 1-.8l.9-5.7c.1-.5.5-.9 1.1-.9h2.5c5.1 0 8.1-2.5 8.9-7.4.3-2.2 0-3.9-1-5.1-1.1-1.3-3-2-5.8-2.1zm.9 7.3c-.4 2.8-2.6 2.8-4.7 2.8h-1.2l.8-5.2c0-.3.3-.5.6-.5h.6c1.4 0 2.8 0 3.5.8.4.4.5 1.1.4 2.1z"/>
-      <path fill="#003087" d="M26.7 6.7h-7.9c-.5 0-1 .4-1.1.9L15.1 26c-.1.5.3.9.8.9h3.8c.4 0 .7-.3.8-.7l1-6.3c.1-.5.5-.9 1.1-.9h2.5c5.1 0 8.1-2.5 8.9-7.4.3-2.2 0-3.9-1-5.1-1.1-1.3-3-2-5.8-2.1zm.9 7.3c-.4 2.8-2.6 2.8-4.7 2.8h-1.2l.8-5.2c0-.3.3-.5.6-.5h.6c1.4 0 2.8 0 3.5.8.4.4.5 1.1.4 2.1z"/>
-      <path fill="#009CDE" d="M94.2 13.5h-3.7c-.3 0-.6.2-.6.5l-.1.7-.1-.2c-.6-.9-1.9-1.5-3.6-1.5-3.4 0-6.3 2.6-6.9 6.2-.3 1.8 0 3.5 1 4.6 1 .9 2.4 1.3 4.1 1.3 2.9 0 4.5-1.9 4.5-1.9l-.1.7c-.1.5.3.9.8.9h3.3c.5 0 .9-.4 1-.8l2-12.4c0-.5-.3-.9-.8-.9zm-4.6 6c-.3 1.9-1.8 3.1-3.7 3.1-.9 0-1.7-.3-2.2-.8-.5-.6-.7-1.4-.6-2.3.3-1.8 1.9-3.1 3.7-3.1.9 0 1.6.3 2.1.8.6.5.8 1.3.7 2.3z"/>
-      <path fill="#003087" d="M108.9 13.5h-3.7c-.4 0-.7.2-.9.6l-5.1 7.7-2.2-7.3c-.1-.4-.5-.7-.9-.7h-3.6c-.4 0-.7.4-.6.8l4.1 12.1-3.9 5.5c-.3.4 0 1 .5 1h3.7c.4 0 .7-.2.9-.6l12.5-18.1c.3-.4 0-1-.5-1z"/>
-    </svg>
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
+      <VisaLogo className={className} />
+      <MastercardLogo className={className} />
+      <AmexLogo className={className} />
+    </div>
   );
 }
 
-export function StripeLogo({ className = "h-8" }: { className?: string }) {
+export function PayPalLogo({ className = "h-6" }: { className?: string }) {
+  return <PaymentImg src="/payments/paypal.png" alt="PayPal" className={className} darkBg />;
+}
+
+export function StripeLogo({ className = "h-6" }: { className?: string }) {
+  return <PaymentImg src="/payments/stripe.png" alt="Stripe" className={className} darkBg />;
+}
+
+export function PaymentMethodsBar({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 60 25" className={className} aria-label="Stripe">
-      <path fill="#635BFF" d="M59.64 14.28h-8.06c0 3.36-1.64 5.04-4.88 5.04-3.72 0-6.32-2.84-6.32-7.36 0-4.64 2.68-7.48 6.48-7.48 3.92 0 5.88 2.24 5.88 5.52 0 .56-.04 1.12-.12 1.68h-9.48c.16 2.08 1.32 3.24 3.36 3.24 1.48 0 2.44-.68 2.8-2.04h4.24zm-4.16-3.48c-.12-1.72-1.16-2.76-2.88-2.76-1.76 0-2.92 1.08-3.12 2.76h6zM40.08 2.8v17.92c0 2.48-1.28 3.84-3.92 3.84-2 0-3.56-.72-4.32-1.68l2.16-2.56c.48.64 1.12 1.04 1.96 1.04 1.08 0 1.64-.68 1.64-1.96V2.8h4.48zM33.56 10.48c0-4.56 2.52-7.48 6.44-7.48 2.24 0 3.72.96 4.48 2.32l-3.48 2.08c-.4-.72-1-1.16-1.88-1.16-1.56 0-2.52 1.32-2.52 3.48v.16c0 2.16.96 3.48 2.52 3.48.88 0 1.48-.44 1.88-1.16l3.48 2.08c-.76 1.36-2.24 2.32-4.48 2.32-3.92 0-6.44-2.92-6.44-7.48zM0 3.24h4.96l4.48 14.08L14 3.24h4.88L12.8 23.56H8.32L0 3.24z"/>
-    </svg>
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+      <VisaLogo />
+      <MastercardLogo />
+      <AmexLogo />
+      <PayPalLogo />
+      <StripeLogo />
+    </div>
   );
 }

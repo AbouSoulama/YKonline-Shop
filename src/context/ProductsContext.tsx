@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { Product, products as fallbackProducts } from "../data/products";
+import { mapProductRow } from "../lib/products";
 
 interface ProductRow {
   id: string;
@@ -25,34 +26,10 @@ interface ProductRow {
   how_to_use: { area: string; method: string }[] | null;
 }
 
-function mapProduct(row: ProductRow): Product {
-  return {
-    id: row.id,
-    name: row.name,
-    tagline: row.tagline ?? "",
-    description: row.description ?? "",
-    longDescription: row.long_description ?? "",
-    price: Number(row.price),
-    oldPrice: row.old_price ? Number(row.old_price) : undefined,
-    size: row.size ?? "",
-    type: (row.type as Product["type"]) ?? "Raw",
-    usage: row.usage ?? [],
-    image: row.image ?? "",
-    gallery: row.gallery ?? [],
-    rating: Number(row.rating ?? 0),
-    reviews: row.reviews_count ?? 0,
-    stock: row.stock ?? 0,
-    badge: row.badge ?? undefined,
-    ingredients: row.ingredients ?? "",
-    storage: row.storage ?? "",
-    benefits: row.benefits ?? [],
-    howToUse: row.how_to_use ?? [],
-  };
-}
-
 interface ProductsContextValue {
   products: Product[];
   loading: boolean;
+  refreshProducts: () => Promise<void>;
   getProductById: (id: string) => Product | undefined;
   getRelatedProducts: (id: string, limit?: number) => Product[];
 }
@@ -75,7 +52,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       .order("created_at", { ascending: true });
 
     if (!error && data?.length) {
-      setProducts(data.map(row => mapProduct(row as ProductRow)));
+      setProducts(data.map(row => mapProductRow(row as ProductRow)));
     }
     setLoading(false);
   }, []);
@@ -90,7 +67,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     products.filter(p => p.id !== id).slice(0, limit);
 
   return (
-    <ProductsContext.Provider value={{ products, loading, getProductById, getRelatedProducts }}>
+    <ProductsContext.Provider value={{ products, loading, refreshProducts: fetchProducts, getProductById, getRelatedProducts }}>
       {children}
     </ProductsContext.Provider>
   );

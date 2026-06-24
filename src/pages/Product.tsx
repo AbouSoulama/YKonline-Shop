@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Minus, Plus, ShoppingCart, Truck, ShieldCheck, RotateCcw, Star, Check, ChevronRight, Heart, Share2 } from "lucide-react";
 import { useProducts } from "../context/ProductsContext";
 import { useReviews } from "../context/ReviewContext";
+import { useAuth } from "../context/AuthContext";
 import { useCart, formatPrice } from "../context/CartContext";
+import { toggleWishlist, isInWishlist } from "../lib/account";
 import ProductCard from "../components/ProductCard";
 
 export default function Product() {
@@ -13,9 +15,15 @@ export default function Product() {
   const { getProductReviews } = useReviews();
   const productReviews = getProductReviews(id || "");
   const { addItem } = useCart();
+  const { user } = useAuth();
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [tab, setTab] = useState<"desc" | "use" | "ingredients" | "reviews">("desc");
+  const [inWishlist, setInWishlist] = useState(false);
+
+  useEffect(() => {
+    if (user?.id && id) isInWishlist(user.id, id).then(setInWishlist);
+  }, [user?.id, id]);
 
   if (!product) {
     return (
@@ -29,11 +37,13 @@ export default function Product() {
   const related = getRelatedProducts(product.id);
 
   const addToCart = () => {
-    addItem({ id: product.id, name: product.name, size: product.size, price: product.price, image: product.image }, qty);
+    const err = addItem({ id: product.id, name: product.name, size: product.size, price: product.price, image: product.image }, qty, product.stock);
+    if (err) alert(err);
   };
 
   const buyNow = () => {
-    addItem({ id: product.id, name: product.name, size: product.size, price: product.price, image: product.image }, qty);
+    const err = addItem({ id: product.id, name: product.name, size: product.size, price: product.price, image: product.image }, qty, product.stock);
+    if (err) { alert(err); return; }
     window.location.href = "/checkout";
   };
 
@@ -88,20 +98,34 @@ export default function Product() {
           </div>
 
           <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
+          {product.stock <= 0 ? (
+            <p className="text-red-600 font-semibold mb-4">Out of stock</p>
+          ) : (
+            <p className="text-sm text-gray-500 mb-4">{product.stock} in stock</p>
+          )}
 
           {/* Quantity + buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="flex items-center border border-cream rounded-full bg-cream/30">
               <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-4 py-3 text-green" aria-label="Decrease"><Minus size={18} /></button>
               <span className="px-4 font-semibold">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="px-4 py-3 text-green" aria-label="Increase"><Plus size={18} /></button>
+              <button onClick={() => setQty(Math.min(product.stock, qty + 1))} className="px-4 py-3 text-green" aria-label="Increase"><Plus size={18} /></button>
             </div>
-            <button onClick={addToCart} className="btn-outline flex-1"><ShoppingCart size={18} /> Add to Cart</button>
-            <button onClick={buyNow} className="btn-accent flex-1">Buy Now</button>
+            <button onClick={addToCart} disabled={product.stock <= 0} className="btn-outline flex-1 disabled:opacity-50"><ShoppingCart size={18} /> Add to Cart</button>
+            <button onClick={buyNow} disabled={product.stock <= 0} className="btn-accent flex-1 disabled:opacity-50">Buy Now</button>
           </div>
 
           <div className="flex items-center gap-4 mb-6 text-sm">
-            <button className="flex items-center gap-1 text-gray-600 hover:text-red-500"><Heart size={16} /> Wishlist</button>
+            <button
+              onClick={async () => {
+                if (!user?.id) { window.location.href = "/account"; return; }
+                const added = await toggleWishlist(user.id, product.id);
+                setInWishlist(added);
+              }}
+              className={`flex items-center gap-1 ${inWishlist ? "text-red-500" : "text-gray-600 hover:text-red-500"}`}
+            >
+              <Heart size={16} className={inWishlist ? "fill-current" : ""} /> Wishlist
+            </button>
             <button className="flex items-center gap-1 text-gray-600 hover:text-green"><Share2 size={16} /> Share</button>
           </div>
 

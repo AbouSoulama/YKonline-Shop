@@ -26,6 +26,23 @@ async function getPayPalToken() {
   return data.access_token as string;
 }
 
+async function sendOrderEmail(order: Record<string, unknown>) {
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey || !order.customer_email) return;
+  const items = (order.items as Array<{ name: string; quantity: number; price: number }>) ?? [];
+  const itemsHtml = items.map((i) => `<tr><td>${i.name} × ${i.quantity}</td><td>$${(i.price * i.quantity).toFixed(2)}</td></tr>`).join("");
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "YKonline Shop <contact@ykonline.shop>",
+      to: [order.customer_email as string],
+      subject: `Order confirmed — #${order.order_number}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px"><h1 style="color:#0B6623">Thank you!</h1><p>Order #${order.order_number} confirmed.</p><table>${itemsHtml}</table><p><strong>Total: $${Number(order.total).toFixed(2)}</strong></p></div>`,
+    }),
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -45,7 +62,15 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
-      await supabase.from("orders").update({ status: "paid", payment_method: "paypal" }).eq("id", orderId);
+      const { data: before } = await supabase.from("orders").select("status").eq("id", orderId).single();
+      await supabase.rpc("fulfill_order", {
+        p_order_id: orderId,
+        p_payment_method: "paypal",
+      });
+      if (before?.status !== "paid") {
+        const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).single();
+        if (order) await sendOrderEmail(order);
+      }
     }
 
     return new Response(JSON.stringify({ status: data.status }), {

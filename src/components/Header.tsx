@@ -1,6 +1,6 @@
 import { ShoppingCart, Search, User, Menu, X, MessageCircle, Truck, ShieldCheck, Leaf, BadgePercent } from "lucide-react";
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
 const nav = [
@@ -15,8 +15,10 @@ const nav = [
 
 export default function Header() {
   const { totalItems, setIsOpen } = useCart();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-green/10 shadow-[0_10px_40px_rgba(11,102,35,0.08)]">
@@ -106,9 +108,16 @@ export default function Header() {
       {searchOpen && (
         <div className="border-t border-cream bg-cream/40">
           <div className="container-page py-3">
-            <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex gap-2" onSubmit={(e) => {
+              e.preventDefault();
+              const q = searchQuery.trim();
+              setSearchOpen(false);
+              navigate(q ? `/shop?q=${encodeURIComponent(q)}` : "/shop");
+            }}>
               <input
                 type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search shea butter, routines, tips..."
                 className="flex-1 px-4 py-3 rounded-full border border-green/20 bg-white focus:outline-none focus:border-green"
               />

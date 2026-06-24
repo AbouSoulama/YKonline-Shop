@@ -85,10 +85,7 @@ export async function fetchPostBySlug(slug: string): Promise<BlogPost | null> {
 
 export async function incrementPostViews(id: string): Promise<void> {
   if (!isSupabaseConfigured) return;
-  const { data } = await supabase.from("blog_posts").select("views").eq("id", id).single();
-  if (data) {
-    await supabase.from("blog_posts").update({ views: (data.views ?? 0) + 1 }).eq("id", id);
-  }
+  await supabase.rpc("increment_blog_views", { post_id: id });
 }
 
 export async function createBlogPost(post: Omit<BlogPost, "id" | "views" | "date">): Promise<{ success: boolean; error?: string }> {

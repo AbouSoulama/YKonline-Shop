@@ -1,9 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Mail, Lock, User, Package, MapPin, Heart, LogOut, Eye, EyeOff, ShoppingCart, ChevronRight, Settings, Bell, AlertCircle, CheckCircle, Star, MessageSquare, Send } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, confirmLogout } from "../context/AuthContext";
 import { useReviews } from "../context/ReviewContext";
 import { useProducts } from "../context/ProductsContext";
+import { useCart } from "../context/CartContext";
+import {
+  fetchUserOrders, fetchAddresses, fetchWishlist, saveAddress, deleteAddress,
+  updateProfile, changePassword, type Address, type WishlistItem,
+} from "../lib/account";
 
 export default function Account() {
   const { user, login, register, logout, loading } = useAuth();
@@ -21,29 +26,54 @@ export default function Account() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
   const [reviewSuccess, setReviewSuccess] = useState("");
-
+  const [orders, setOrders] = useState<Awaited<ReturnType<typeof fetchUserOrders>>>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [settingsName, setSettingsName] = useState("");
+  const [settingsPhone, setSettingsPhone] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [settingsMsg, setSettingsMsg] = useState("");
+  const { addItem } = useCart();
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const pwdRef = useRef<HTMLInputElement>(null);
 
-  const orders = [
-    { ref: "#YK-2026-1042", date: "Jan 10, 2026", total: "$42.90", status: "Delivered", statusColor: "bg-green/10 text-green", items: [{ name: "Unrefined Organic Raw Shea Butter - 250g", qty: 1, price: "$24.90", image: "/images/raw-shea-jar.jpg" }, { name: "Organic Whipped Shea Butter - 150ml", qty: 1, price: "$19.90", image: "/images/whipped-shea-jar.jpg" }] },
-    { ref: "#YK-2026-0987", date: "Dec 28, 2025", total: "$24.90", status: "Delivered", statusColor: "bg-green/10 text-green", items: [{ name: "Unrefined Organic Raw Shea Butter - 100g", qty: 1, price: "$12.90", image: "/images/raw-shea-jar.jpg" }] },
-    { ref: "#YK-2025-0912", date: "Dec 12, 2025", total: "$19.90", status: "Delivered", statusColor: "bg-green/10 text-green", items: [{ name: "Organic Whipped Shea Butter - 150ml", qty: 1, price: "$19.90", image: "/images/whipped-shea-jar.jpg" }] },
-  ];
-
-  const addresses = [
-    { id: 1, type: "Home", address: "123 Shea Avenue, Organic City, OC 12345", phone: "+1 (301) 266-9830", isDefault: true },
-    { id: 2, type: "Office", address: "456 Business Park, Skincare District, SD 67890", phone: "+1 (301) 266-9830", isDefault: false },
-  ];
-
-  const wishlist = [
-    { id: 1, name: "Unrefined Organic Raw Shea Butter", size: "500g", price: "$42.90", oldPrice: "$49.90", image: "/images/raw-shea-jar.jpg" },
-    { id: 2, name: "Organic Whipped Shea Butter", size: "150ml", price: "$19.90", oldPrice: "$22.90", image: "/images/whipped-shea-jar.jpg" },
-    { id: 3, name: "YKonline Shop Discovery Set", size: "Set", price: "$39.90", oldPrice: "$49.90", image: "/images/shea-discovery-set.jpg" },
-  ];
-
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setSettingsName(user.name);
+    fetchUserOrders(user.id, user.email).then(setOrders);
+    fetchAddresses(user.id).then(setAddresses);
+    fetchWishlist(user.id).then(setWishlist);
+  }, [user?.id, user?.email, user?.name]);
+
+  const handleAddAddress = async () => {
+    if (!user?.id) return;
+    const type = prompt("Address label (Home, Office...)", "Home");
+    if (!type) return;
+    const address = prompt("Street address");
+    if (!address) return;
+    const city = prompt("City") ?? "";
+    const country = prompt("Country", "United States") ?? "United States";
+    const phone = prompt("Phone") ?? "";
+    const result = await saveAddress(user.id, { type, address, city, country, phone, isDefault: addresses.length === 0 });
+    if (result.success) setAddresses(await fetchAddresses(user.id));
+    else alert(result.error);
+  };
+
+  const handleSaveSettings = async () => {
+    if (!user?.id) return;
+    setSettingsMsg("");
+    const profileResult = await updateProfile(user.id, settingsName, settingsPhone);
+    if (!profileResult.success) { setSettingsMsg(profileResult.error ?? "Update failed"); return; }
+    if (newPassword.length >= 8) {
+      const pwdResult = await changePassword(newPassword);
+      if (!pwdResult.success) { setSettingsMsg(pwdResult.error ?? "Password update failed"); return; }
+      setNewPassword("");
+    }
+    setSettingsMsg("Settings saved successfully.");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +246,9 @@ export default function Account() {
           {activeTab === "orders" && (
             <div className="fade-in">
               <h2 className="font-display text-2xl font-bold text-gray-950 mb-6">My orders</h2>
+              {orders.length === 0 ? (
+                <p className="text-gray-500">No orders yet. <Link to="/shop" className="text-green font-semibold">Start shopping</Link></p>
+              ) : (
               <div className="space-y-4">
                 {orders.map((o) => (
                   <div key={o.ref} className="rounded-[1.5rem] border border-gray-100 bg-white overflow-hidden transition-shadow hover:shadow-md">
@@ -255,6 +288,7 @@ export default function Account() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
@@ -262,8 +296,11 @@ export default function Account() {
             <div className="fade-in">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-display text-2xl font-bold text-gray-950">My addresses</h2>
-                <button className="btn-primary !py-2.5 !text-sm">+ Add New Address</button>
+                <button onClick={handleAddAddress} className="btn-primary !py-2.5 !text-sm">+ Add New Address</button>
               </div>
+              {addresses.length === 0 ? (
+                <p className="text-gray-500">No saved addresses yet.</p>
+              ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {addresses.map((a) => (
                   <div key={a.id} className="rounded-[1.5rem] border border-gray-100 bg-white p-7 shadow-sm transition-all hover:shadow-md">
@@ -282,20 +319,24 @@ export default function Account() {
                     <div className="flex gap-4 border-t border-gray-50 pt-4">
                       <button className="text-sm font-bold text-green hover:text-orange transition-colors">Edit</button>
                       {!a.isDefault && <button className="text-sm font-bold text-gray-400 hover:text-green transition-colors">Set as default</button>}
-                      <button className="text-sm font-bold text-red-400 hover:text-red-500 transition-colors ml-auto">Delete</button>
+                      <button onClick={async () => { if (user?.id && confirm("Delete this address?")) { await deleteAddress(a.id); setAddresses(await fetchAddresses(user.id)); } }} className="text-sm font-bold text-red-400 hover:text-red-500 transition-colors ml-auto">Delete</button>
                     </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
           {activeTab === "wishlist" && (
             <div className="fade-in">
               <h2 className="font-display text-2xl font-bold text-gray-950 mb-6">My wishlist</h2>
+              {wishlist.length === 0 ? (
+                <p className="text-gray-500">Your wishlist is empty.</p>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {wishlist.map((w) => (
-                  <div key={w.id} className="group rounded-[1.5rem] border border-gray-100 bg-white overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
+                  <div key={w.productId} className="group rounded-[1.5rem] border border-gray-100 bg-white overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
                     <div className="relative aspect-square overflow-hidden bg-[#f5f5f5]">
                       <img src={w.image} alt={w.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       <button className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white text-red-500 shadow-md transition-transform hover:scale-110">
@@ -307,10 +348,13 @@ export default function Account() {
                       <p className="mt-1 text-xs text-gray-500">{w.size}</p>
                       <div className="mt-3 flex items-center justify-between">
                         <div>
-                          <span className="font-display text-xl font-bold text-green">{w.price}</span>
-                          {w.oldPrice && <span className="ml-2 text-sm text-gray-400 line-through">{w.oldPrice}</span>}
+                          <span className="font-display text-xl font-bold text-green">${w.price.toFixed(2)}</span>
+                          {w.oldPrice && <span className="ml-2 text-sm text-gray-400 line-through">${w.oldPrice.toFixed(2)}</span>}
                         </div>
-                        <button className="flex h-10 w-10 items-center justify-center rounded-full bg-[#052d13] text-white shadow-lg transition-transform hover:scale-110 active:scale-95">
+                        <button
+                          onClick={() => addItem({ id: w.productId, name: w.name, size: w.size, price: w.price, image: w.image })}
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#052d13] text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+                        >
                           <ShoppingCart size={18} />
                         </button>
                       </div>
@@ -318,6 +362,7 @@ export default function Account() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
@@ -418,26 +463,24 @@ export default function Account() {
             <div className="fade-in max-w-2xl">
               <h2 className="font-display text-2xl font-bold text-gray-950 mb-6">Account settings</h2>
               <div className="rounded-[1.5rem] border border-gray-100 bg-white p-7 space-y-5">
+                {settingsMsg && <p className="text-sm text-green font-semibold">{settingsMsg}</p>}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Full name</label>
-                  <input type="text" defaultValue={user.name} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
+                  <input type="text" value={settingsName} onChange={e => setSettingsName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
-                  <input type="email" defaultValue={user.email} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
+                  <input type="email" value={user.email} disabled className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Phone</label>
-                  <input type="tel" placeholder="+1 (000) 000-0000" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
+                  <input type="tel" value={settingsPhone} onChange={e => setSettingsPhone(e.target.value)} placeholder="+1 (000) 000-0000" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
                 </div>
                 <div className="pt-3 border-t border-gray-100">
                   <h3 className="font-bold text-gray-950 mb-3">Change password</h3>
-                  <div className="space-y-3">
-                    <input type="password" placeholder="Current password" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
-                    <input type="password" placeholder="New password" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
-                  </div>
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password (min. 8 characters)" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
                 </div>
-                <button className="btn-primary">Save changes</button>
+                <button type="button" onClick={handleSaveSettings} className="btn-primary">Save changes</button>
               </div>
             </div>
           )}

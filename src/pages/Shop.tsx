@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Search, SlidersHorizontal, Grid, List } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { useProducts } from "../context/ProductsContext";
 
@@ -16,12 +17,18 @@ const sorts = [
 
 export default function Shop() {
   const { products } = useProducts();
+  const [searchParams] = useSearchParams();
   const [size, setSize] = useState("All");
   const [type, setType] = useState<(typeof types)[number]>("All");
   const [usage, setUsage] = useState("All");
   const [sort, setSort] = useState("popular");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [mobileFilters, setMobileFilters] = useState(false);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) setQuery(q);
+  }, [searchParams]);
 
   const filtered = useMemo(() => {
     let list = [...products];
@@ -40,7 +47,7 @@ export default function Shop() {
       default: list.sort((a, b) => b.reviews - a.reviews);
     }
     return list;
-  }, [size, type, usage, sort, query]);
+  }, [size, type, usage, sort, query, products]);
 
   const Filters = () => (
     <div className="space-y-6">

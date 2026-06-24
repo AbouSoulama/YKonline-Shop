@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode, useCallback } from "react";
+import { validatePromoCode } from "../lib/promos";
 
 export interface CartItem {
   id: string;
@@ -9,11 +10,16 @@ export interface CartItem {
   quantity: number;
 }
 
+interface AppliedPromo {
+  code: string;
+  discount: number;
+}
+
 interface CartContextValue {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">, qty?: number) => void;
+  addItem: (item: Omit<CartItem, "quantity">, qty?: number, maxStock?: number) => string | null;
   removeItem: (id: string) => void;
-  updateQuantity: (id: string, qty: number) => void;
+  updateQuantity: (id: string, qty: number, maxStock?: number) => string | null;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -21,6 +27,9 @@ interface CartContextValue {
   setIsOpen: (v: boolean) => void;
   promoCode: string;
   setPromoCode: (v: string) => void;
+  appliedPromo: AppliedPromo | null;
+  applyPromo: () => Promise<string | null>;
+  clearPromo: () => void;
   discount: number;
   shipping: number;
   shippingDistanceKm: number;
@@ -31,6 +40,7 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "ykonline_cart";
+const PROMO_KEY = "ykonline_promo";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -43,6 +53,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   const [isOpen, setIsOpen] = useState(false);
   const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(() => {
+    try {
+      const raw = localStorage.getItem(PROMO_KEY);
+      return raw ? (JSON.parse(raw) as AppliedPromo) : null;
+    } catch {
+      return null;
+    }
+  });
   const [shippingCost, setShippingCostState] = useState(0);
   const [shippingDistanceKm, setShippingDistanceKm] = useState(0);
 
@@ -50,44 +68,73 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
+  useEffect(() => {
+    if (appliedPromo) localStorage.setItem(PROMO_KEY, JSON.stringify(appliedPromo));
+    else localStorage.removeItem(PROMO_KEY);
+  }, [appliedPromo]);
+
   const setShippingCost = (cost: number, distanceKm = 0) => {
     setShippingCostState(cost);
     setShippingDistanceKm(distanceKm);
   };
 
-  const addItem: CartContextValue["addItem"] = (item, qty = 1) => {
+  const addItem: CartContextValue["addItem"] = (item, qty = 1, maxStock) => {
+    let error: string | null = null;
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
+      const newQty = (existing?.quantity ?? 0) + qty;
+      if (maxStock !== undefined && newQty > maxStock) {
+        error = maxStock === 0 ? `${item.name} is out of stock.` : `Only ${maxStock} available for ${item.name}.`;
+        return prev;
+      }
       if (existing) {
-        return prev.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + qty } : i));
+        return prev.map((i) => (i.id === item.id ? { ...i, quantity: newQty } : i));
       }
       return [...prev, { ...item, quantity: qty }];
     });
-    setIsOpen(true);
+    if (!error) setIsOpen(true);
+    return error;
   };
 
   const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
-  const updateQuantity = (id: string, qty: number) =>
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, qty) } : i))
-    );
+
+  const updateQuantity = (id: string, qty: number, maxStock?: number) => {
+    const next = Math.max(1, qty);
+    if (maxStock !== undefined && next > maxStock) {
+      return `Only ${maxStock} available.`;
+    }
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: next } : i)));
+    return null;
+  };
+
   const clearCart = () => {
     setItems([]);
     setShippingCostState(0);
     setShippingDistanceKm(0);
+    setAppliedPromo(null);
+    setPromoCode("");
   };
 
   const totalItems = useMemo(() => items.reduce((s, i) => s + i.quantity, 0), [items]);
   const subtotal = useMemo(() => items.reduce((s, i) => s + i.price * i.quantity, 0), [items]);
 
-  const discount = useMemo(() => {
-    const code = promoCode.trim().toUpperCase();
-    if (code === "WELCOME10" && subtotal > 0) return subtotal * 0.1;
-    return 0;
+  const applyPromo = useCallback(async () => {
+    const result = await validatePromoCode(promoCode, subtotal);
+    if (!result.valid || !result.discount) {
+      setAppliedPromo(null);
+      return result.error ?? "Invalid promo code.";
+    }
+    setAppliedPromo({ code: result.code ?? promoCode.toUpperCase(), discount: result.discount });
+    return null;
   }, [promoCode, subtotal]);
 
-  const shipping = items.length === 0 ? 0 : shippingCost;
+  const clearPromo = () => {
+    setAppliedPromo(null);
+    setPromoCode("");
+  };
 
+  const discount = appliedPromo?.discount ?? 0;
+  const shipping = items.length === 0 ? 0 : shippingCost;
   const total = subtotal - discount + shipping;
 
   return (
@@ -104,6 +151,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setIsOpen,
         promoCode,
         setPromoCode,
+        appliedPromo,
+        applyPromo,
+        clearPromo,
         discount,
         shipping,
         shippingDistanceKm,

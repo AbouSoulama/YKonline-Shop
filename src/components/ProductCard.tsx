@@ -65,16 +65,18 @@ export default function ProductCard({ product }: { product: Product }) {
             )}
           </div>
           <button
-            onClick={() =>
-              addItem({
+            onClick={() => {
+              const err = addItem({
                 id: product.id,
                 name: product.name,
                 size: product.size,
                 price: product.price,
                 image: product.image,
-              })
-            }
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#052d13] text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+              }, 1, product.stock);
+              if (err) alert(err);
+            }}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#052d13] text-white shadow-lg transition-transform hover:scale-110 active:scale-95 disabled:opacity-40"
+            disabled={product.stock <= 0}
             aria-label="Add to cart"
           >
             <ShoppingCart size={18} />

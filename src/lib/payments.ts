@@ -15,6 +15,16 @@ export function getPayPalClientId() {
   return isPayPalConfigured ? paypalClientId : null;
 }
 
+function extractFunctionError(data: unknown, error: { message: string } | null): string | null {
+  if (data && typeof data === "object" && "error" in data && typeof (data as { error: unknown }).error === "string") {
+    return (data as { error: string }).error;
+  }
+  if (error?.message?.includes("non-2xx")) {
+    return "Payment server is unavailable. Please try card payment or contact support.";
+  }
+  return error?.message ?? null;
+}
+
 export async function createCardPaymentIntent(orderId: string): Promise<{ clientSecret: string } | { error: string }> {
   if (!isSupabaseConfigured) return { error: "Payment system not configured." };
 
@@ -22,8 +32,8 @@ export async function createCardPaymentIntent(orderId: string): Promise<{ client
     body: { orderId },
   });
 
-  if (error) return { error: error.message };
-  if (data?.error) return { error: data.error };
+  const fnError = extractFunctionError(data, error);
+  if (fnError) return { error: fnError };
   if (!data?.clientSecret) return { error: "Could not initialize card payment." };
   return { clientSecret: data.clientSecret };
 }
@@ -44,7 +54,7 @@ export async function createStripeCheckout(params: {
     },
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: extractFunctionError(data, error) ?? "Stripe Checkout could not be created." };
   if (data?.error) return { error: data.error };
   if (!data?.url) return { error: "Stripe Checkout could not be created." };
   return { url: data.url };
@@ -61,7 +71,7 @@ export async function createPayPalOrder(params: {
     body: params,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: extractFunctionError(data, error) ?? "PayPal order could not be created." };
   if (data?.error) return { error: data.error };
   if (!data?.paypalOrderId) return { error: "PayPal order could not be created." };
   return { paypalOrderId: data.paypalOrderId };
@@ -72,7 +82,8 @@ export async function capturePayPalOrder(paypalOrderId: string, orderId: string)
     body: { paypalOrderId, orderId },
   });
 
-  if (error) return { success: false, error: error.message };
+  const fnError = extractFunctionError(data, error);
+  if (fnError) return { success: false, error: fnError };
   if (data?.error) return { success: false, error: data.error };
   return { success: data?.status === "COMPLETED" };
 }

@@ -12,6 +12,9 @@ import { useReviews } from "../context/ReviewContext";
 import { useProducts } from "../context/ProductsContext";
 import { fetchOrders, updateOrderStatus as dbUpdateOrderStatus } from "../lib/orders";
 import { fetchAllPosts, createBlogPost, deleteBlogPost, toggleBlogPostStatus, type BlogPost as BlogPostType } from "../lib/blog";
+import { upsertProduct, deleteProduct as dbDeleteProduct, generateProductId } from "../lib/products";
+import { fetchPromoCodes, upsertPromoCode, togglePromoActive as dbTogglePromo } from "../lib/promos";
+import type { Product as StoreProduct } from "../data/products";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { slugify } from "../constants/site";
 
@@ -108,7 +111,7 @@ const fmt = (n: number) => `$${n.toFixed(2)}`;
 // ── Component ──
 export default function Admin() {
   const { isAdmin, login, logout, refreshUser } = useAuth();
-  const { products: storeProducts } = useProducts();
+  const { products: storeProducts, refreshProducts } = useProducts();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
@@ -120,7 +123,7 @@ export default function Admin() {
   const [products, setProducts] = useState(initProducts);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>(initCustomers);
-  const [promos, setPromos] = useState(initPromos);
+  const [promos, setPromos] = useState<Promo[]>([]);
   const [blog, setBlog] = useState<BlogPost[]>([]);
   const { reviews, approveReview: ctxApproveReview, deleteReview: ctxDeleteReview, pendingReviews } = useReviews();
 
@@ -136,7 +139,12 @@ export default function Admin() {
   }, [isAdmin, refreshUser]);
 
   const loadAdminData = async () => {
-    const ordersData = await fetchOrders();
+    const [ordersData, blogData, promosData] = await Promise.all([
+      fetchOrders(),
+      fetchAllPosts(),
+      fetchPromoCodes(),
+    ]);
+
     setOrders(ordersData.map(o => ({
       dbId: o.id,
       id: o.orderNumber,
@@ -148,22 +156,36 @@ export default function Admin() {
       items: o.items.length,
     })));
 
-    const blogData = await fetchAllPosts();
     setBlog(blogData.map(b => ({
       id: b.id, title: b.title, category: b.category, status: b.status, date: b.date, views: b.views,
     })));
 
+    setPromos(promosData.map(p => ({
+      id: p.id, code: p.code, discount: p.discount, type: p.type, uses: p.uses, maxUses: p.maxUses, active: p.active, expires: p.expires,
+    })));
+
     if (isSupabaseConfigured) {
-      const { data: profiles } = await supabase.from("profiles").select("id, name, role, created_at");
+      const { data: profiles } = await supabase.from("profiles").select("id, name, email, role, created_at");
+      const orderStats = ordersData.reduce<Record<string, { orders: number; spent: number; email: string }>>((acc, o) => {
+        const key = o.customerEmail || o.customerName;
+        if (!acc[key]) acc[key] = { orders: 0, spent: 0, email: o.customerEmail };
+        acc[key].orders += 1;
+        if (o.status !== "cancelled") acc[key].spent += o.total;
+        return acc;
+      }, {});
+
       if (profiles) {
-        setCustomers(profiles.filter(p => p.role === "customer").map((p, i) => ({
-          id: p.id,
-          name: p.name,
-          email: "",
-          orders: 0,
-          spent: 0,
-          joined: new Date(p.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-        })));
+        setCustomers(profiles.filter(p => p.role === "customer").map((p) => {
+          const stats = orderStats[p.email ?? ""] ?? { orders: 0, spent: 0, email: p.email ?? "" };
+          return {
+            id: p.id,
+            name: p.name,
+            email: p.email ?? stats.email,
+            orders: stats.orders,
+            spent: stats.spent,
+            joined: new Date(p.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+          };
+        }));
       }
     }
   };
@@ -202,10 +224,47 @@ export default function Admin() {
   const avgOrder = totalRevenue / (totalOrders || 1);
 
   // ── Product CRUD ──
-  const deleteProduct = (id: string) => { if (confirm("Delete this product?")) setProducts(p => p.filter(x => x.id !== id)); };
-  const saveProduct = (p: Product) => {
-    if (products.find(x => x.id === p.id)) setProducts(prev => prev.map(x => x.id === p.id ? p : x));
-    else setProducts(prev => [...prev, p]);
+  const adminToStoreProduct = (p: Product): StoreProduct => ({
+    id: p.id,
+    name: p.name,
+    tagline: p.tagline,
+    description: p.description,
+    longDescription: p.description,
+    price: p.price,
+    oldPrice: p.oldPrice > 0 ? p.oldPrice : undefined,
+    size: p.size,
+    type: p.type as StoreProduct["type"],
+    usage: p.usage,
+    image: p.image,
+    gallery: [p.image],
+    rating: 4.9,
+    reviews: 0,
+    stock: p.stock,
+    badge: p.badge || undefined,
+    ingredients: p.ingredients,
+    storage: p.storage,
+    benefits: [],
+    howToUse: [],
+  });
+
+  const deleteProduct = async (id: string) => {
+    if (!confirm("Delete this product?")) return;
+    const result = await dbDeleteProduct(id);
+    if (result.error) { alert(result.error); return; }
+    setProducts(prev => prev.filter(x => x.id !== id));
+    await refreshProducts();
+  };
+
+  const saveProduct = async (p: Product) => {
+    const product = { ...p, id: p.id || generateProductId(p.name, p.size) };
+    const result = await upsertProduct(adminToStoreProduct(product));
+    if (result.error) { alert(result.error); return; }
+    if (products.find(x => x.id === product.id)) {
+      setProducts(prev => prev.map(x => x.id === product.id ? product : x));
+    } else {
+      setProducts(prev => [...prev, product]);
+    }
+    await refreshProducts();
     setShowProductModal(false);
     setEditingProduct(null);
   };
@@ -217,12 +276,27 @@ export default function Admin() {
   };
 
   // ── Promo CRUD ──
-  const savePromo = (p: Promo) => {
-    if (promos.find(x => x.id === p.id)) setPromos(prev => prev.map(x => x.id === p.id ? p : x));
-    else setPromos(prev => [...prev, p]);
+  const savePromo = async (p: Promo) => {
+    const result = await upsertPromoCode({
+      id: /^[0-9a-f-]{36}$/i.test(p.id) ? p.id : undefined,
+      code: p.code,
+      discount: p.discount,
+      type: p.type,
+      uses: p.uses,
+      maxUses: p.maxUses,
+      active: p.active,
+      expires: p.expires,
+    });
+    if (result.error) { alert(result.error); return; }
+    await loadAdminData();
     setShowPromoModal(false);
   };
-  const togglePromo = (id: string) => setPromos(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
+  const togglePromo = async (id: string) => {
+    const promo = promos.find(p => p.id === id);
+    if (!promo) return;
+    await dbTogglePromo(id, !promo.active);
+    setPromos(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
+  };
 
   // ── Blog ──
   const toggleBlogStatus = async (id: string, current: "Published" | "Draft") => {

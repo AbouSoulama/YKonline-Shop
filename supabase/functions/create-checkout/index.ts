@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { orderId, orderNumber, paymentMethod, successUrl, cancelUrl } = await req.json();
+    const { orderId, orderNumber, successUrl, cancelUrl } = await req.json();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       payment_method_types: ["card", "link"],
       line_items: lineItems,
@@ -75,7 +75,20 @@ Deno.serve(async (req) => {
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&order=${orderNumber}`,
       cancel_url: cancelUrl,
       metadata: { order_id: orderId, order_number: orderNumber },
-    });
+    };
+
+    const discountAmount = Number(order.discount_amount ?? 0);
+    if (discountAmount > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: Math.round(discountAmount * 100),
+        currency: "usd",
+        duration: "once",
+        name: order.promo_code ? `Promo ${order.promo_code}` : "Discount",
+      });
+      sessionParams.discounts = [{ coupon: coupon.id }];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     await supabase.from("orders").update({ stripe_session_id: session.id }).eq("id", orderId);
 

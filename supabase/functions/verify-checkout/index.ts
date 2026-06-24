@@ -32,7 +32,11 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
-      await supabase.from("orders").update({ status: "paid" }).eq("id", orderId);
+      await supabase.rpc("fulfill_order", {
+        p_order_id: orderId,
+        p_stripe_session_id: sessionId,
+        p_payment_method: "stripe",
+      });
     }
 
     return new Response(JSON.stringify({ paid, orderId }), {

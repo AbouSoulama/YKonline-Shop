@@ -4,7 +4,7 @@ import { ShieldCheck, Truck, CreditCard, Check, ChevronLeft, Lock, Loader2, MapP
 import { useCart, formatPrice } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { calculateShipping, STORE_ADDRESS } from "../lib/shipping";
-import { createOrder } from "../lib/orders";
+import { createOrder, validateCartStock } from "../lib/orders";
 import {
   createCardPaymentIntent,
   createStripeCheckout,
@@ -12,7 +12,7 @@ import {
   isPayPalConfigured,
 } from "../lib/payments";
 import { validateEmail, validateName, validatePhone } from "../lib/validation";
-import { CreditCardLogo, PayPalLogo, StripeLogo } from "../components/PaymentLogos";
+import { CreditCardLogo, PayPalLogo, StripeLogo, PaymentMethodsBar } from "../components/PaymentLogos";
 import CardPayment from "../components/CardPayment";
 import PayPalPayment from "../components/PayPalPayment";
 
@@ -21,9 +21,9 @@ type PaymentId = "card" | "paypal" | "stripe";
 const PAYMENT_METHODS: { id: PaymentId; label: string; Logo: typeof CreditCardLogo; desc: string }[] = [
   {
     id: "card",
-    label: "Credit Card",
+    label: "Card (Visa · Mastercard · Amex)",
     Logo: CreditCardLogo,
-    desc: "Pay securely with Visa, Mastercard or Amex via Stripe.",
+    desc: "Pay securely with Visa, Mastercard or American Express via Stripe.",
   },
   {
     id: "paypal",
@@ -41,7 +41,7 @@ const PAYMENT_METHODS: { id: PaymentId; label: string; Logo: typeof CreditCardLo
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items, subtotal, discount, shipping, shippingDistanceKm, setShippingCost, total, clearCart, setIsOpen } = useCart();
+  const { items, subtotal, discount, shipping, shippingDistanceKm, setShippingCost, total, clearCart, setIsOpen, appliedPromo } = useCart();
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [payment, setPayment] = useState<PaymentId>("card");
@@ -135,6 +135,7 @@ export default function Checkout() {
     items,
     subtotal,
     discount,
+    promoCode: appliedPromo?.code,
     shippingCost: finalShipping,
     shippingDistanceKm: quote?.distanceKm ?? shippingDistanceKm,
     total: finalTotal,
@@ -174,6 +175,9 @@ export default function Checkout() {
     }
 
     if (step === 2) {
+      const stockErr = await validateCartStock(items);
+      if (stockErr) { setError(stockErr); return; }
+
       const cost = shippingMethod === "express" && quote ? quote.expressCost : (quote?.cost ?? 0);
       setShippingCost(cost, quote?.distanceKm ?? 0);
       const finalTotal = subtotal - discount + cost;
@@ -333,6 +337,7 @@ export default function Checkout() {
                       <CardPayment
                         clientSecret={cardSecret}
                         orderId={orderInfo.orderId}
+                        orderNumber={orderInfo.orderNumber}
                         total={orderTotal}
                         onSuccess={handlePaymentSuccess}
                         onError={setError}
@@ -406,7 +411,7 @@ export default function Checkout() {
           </div>
           <div className="border-t border-cream pt-4 space-y-2 text-sm">
             <div className="flex justify-between"><span>Subtotal</span><span className="font-semibold">{formatPrice(subtotal)}</span></div>
-            {discount > 0 && <div className="flex justify-between text-green"><span>Discount (WELCOME10)</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
+            {discount > 0 && <div className="flex justify-between text-green"><span>Discount ({appliedPromo?.code ?? "Promo"})</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
             <div className="flex justify-between">
               <span>Shipping{shippingDistanceKm > 0 ? ` (${shippingDistanceKm} km)` : ""}</span>
               <span className="font-semibold">{activeShipping > 0 ? formatPrice(activeShipping) : "—"}</span>
@@ -416,11 +421,9 @@ export default function Checkout() {
               <span className="font-display font-bold text-green">{formatPrice(orderTotal)}</span>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
-            <div className="flex items-center gap-1"><ShieldCheck size={14} className="text-green" /> Secure payment</div>
-            <div className="flex items-center gap-1"><Truck size={14} className="text-green" /> Distance-based</div>
-            <div className="flex items-center gap-1"><CreditCard size={14} className="text-green" /> Card · PayPal · Stripe</div>
-            <div className="flex items-center gap-1"><Check size={14} className="text-green" /> Satisfaction</div>
+          <div className="mt-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Accepted payments</p>
+            <PaymentMethodsBar />
           </div>
         </aside>
       </section>

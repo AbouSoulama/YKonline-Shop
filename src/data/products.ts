@@ -21,46 +21,11 @@ export interface Product {
   howToUse: { area: string; method: string }[];
 }
 
-// Use SVG data URIs for fast, reliable, offline-friendly imagery
-const img = (label: string, tone: "raw" | "whipped" | "set" = "raw") => {
-  const palettes = {
-    raw: { bg: "#FAF3E7", jar: "#8B5A2B", accent: "#0B6623", text: "#0B6623" },
-    whipped: { bg: "#fff1e0", jar: "#FF7900", accent: "#FF7900", text: "#8B5A2B" },
-    set: { bg: "#e8f3ea", jar: "#0B6623", accent: "#FF7900", text: "#0B6623" },
-  };
-  const p = palettes[tone];
-  const svg = `
-  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'>
-    <defs>
-      <linearGradient id='g' x1='0' y1='0' x2='0' y2='1'>
-        <stop offset='0%' stop-color='${p.bg}'/>
-        <stop offset='100%' stop-color='#ffffff'/>
-      </linearGradient>
-      <radialGradient id='s' cx='50%' cy='30%' r='60%'>
-        <stop offset='0%' stop-color='${p.jar}' stop-opacity='0.95'/>
-        <stop offset='100%' stop-color='${p.jar}' stop-opacity='0.75'/>
-      </radialGradient>
-    </defs>
-    <rect width='600' height='600' fill='url(#g)'/>
-    <circle cx='120' cy='120' r='50' fill='${p.accent}' opacity='0.15'/>
-    <circle cx='500' cy='480' r='70' fill='${p.accent}' opacity='0.1'/>
-    <g transform='translate(300 330)'>
-      <ellipse cx='0' cy='140' rx='150' ry='20' fill='#000' opacity='0.08'/>
-      <rect x='-130' y='-150' width='260' height='280' rx='24' fill='url(#s)'/>
-      <rect x='-130' y='-170' width='260' height='40' rx='12' fill='${p.jar}'/>
-      <rect x='-100' y='-60' width='200' height='130' rx='10' fill='#ffffff' opacity='0.95'/>
-      <text x='0' y='-20' text-anchor='middle' font-family='Poppins, sans-serif' font-size='22' font-weight='700' fill='${p.text}'>YKonline</text>
-      <text x='0' y='10' text-anchor='middle' font-family='Poppins, sans-serif' font-size='16' font-weight='600' fill='${p.accent}'>SHEA BUTTER</text>
-      <text x='0' y='45' text-anchor='middle' font-family='Open Sans, sans-serif' font-size='14' fill='#6b7280'>${label}</text>
-    </g>
-    <text x='300' y='80' text-anchor='middle' font-family='Poppins, sans-serif' font-size='28' font-weight='700' fill='${p.text}'>Organic | Natural</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-};
-
 const RAW_IMAGE = "/images/raw-shea-jar.jpg";
 const WHIPPED_IMAGE = "/images/whipped-shea-jar.jpg";
 const SET_IMAGE = "/images/shea-discovery-set.jpg";
+const HERO_IMAGE = "/images/hero-shea-premium.jpg";
+const WHY_IMAGE = "/images/why-ykonline.jpg";
 
 export const products: Product[] = [
   {
@@ -77,7 +42,7 @@ export const products: Product[] = [
     type: "Raw",
     usage: ["Skin", "Hair", "Baby/Family", "Massage"],
     image: RAW_IMAGE,
-    gallery: [RAW_IMAGE, img("100g Raw", "raw"), img("Texture", "raw")],
+    gallery: [RAW_IMAGE, HERO_IMAGE, WHY_IMAGE],
     rating: 4.9,
     reviews: 248,
     stock: 120,
@@ -111,7 +76,7 @@ export const products: Product[] = [
     type: "Raw",
     usage: ["Skin", "Hair", "Baby/Family", "Massage"],
     image: RAW_IMAGE,
-    gallery: [RAW_IMAGE, img("250g Raw", "raw"), img("Family", "raw")],
+    gallery: [RAW_IMAGE, HERO_IMAGE, SET_IMAGE],
     rating: 4.95,
     reviews: 412,
     stock: 80,
@@ -145,7 +110,7 @@ export const products: Product[] = [
     type: "Raw",
     usage: ["Skin", "Hair", "Baby/Family", "Massage"],
     image: RAW_IMAGE,
-    gallery: [RAW_IMAGE, img("500g Raw", "raw"), img("Family", "raw")],
+    gallery: [RAW_IMAGE, WHY_IMAGE, HERO_IMAGE],
     rating: 4.9,
     reviews: 189,
     stock: 45,
@@ -179,7 +144,7 @@ export const products: Product[] = [
     type: "Whipped",
     usage: ["Skin", "Hair", "Baby/Family"],
     image: WHIPPED_IMAGE,
-    gallery: [WHIPPED_IMAGE, img("150ml Whipped", "whipped"), img("Texture", "whipped")],
+    gallery: [WHIPPED_IMAGE, RAW_IMAGE, WHY_IMAGE],
     rating: 4.85,
     reviews: 310,
     stock: 90,
@@ -213,7 +178,7 @@ export const products: Product[] = [
     type: "Set",
     usage: ["Skin", "Hair", "Baby/Family"],
     image: SET_IMAGE,
-    gallery: [SET_IMAGE, img("Gift", "set"), img("Routine", "set")],
+    gallery: [SET_IMAGE, RAW_IMAGE, WHIPPED_IMAGE],
     rating: 5,
     reviews: 156,
     stock: 30,
@@ -247,7 +212,7 @@ export const products: Product[] = [
     type: "Set",
     usage: ["Skin", "Hair", "Baby/Family", "Massage"],
     image: SET_IMAGE,
-    gallery: [SET_IMAGE, img("Family", "set"), img("Routine", "set")],
+    gallery: [SET_IMAGE, RAW_IMAGE, WHIPPED_IMAGE],
     rating: 4.95,
     reviews: 98,
     stock: 25,

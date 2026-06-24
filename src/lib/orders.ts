@@ -7,6 +7,7 @@ export interface OrderPayload {
   items: CartItem[];
   subtotal: number;
   discount: number;
+  promoCode?: string;
   shippingCost: number;
   shippingDistanceKm: number;
   total: number;
@@ -43,14 +44,52 @@ export async function createOrder(payload: OrderPayload): Promise<{ orderId: str
   }
 
   const orderNumber = generateOrderNumber();
+  const userId = payload.userId?.startsWith("local-") ? null : (payload.userId ?? null);
+
+  const rpcPayload = {
+    p_user_id: userId,
+    p_customer_email: payload.customerEmail,
+    p_customer_name: payload.customerName,
+    p_items: payload.items,
+    p_subtotal: payload.subtotal,
+    p_discount_amount: payload.discount,
+    p_promo_code: payload.promoCode ?? null,
+    p_total: payload.total,
+    p_shipping_cost: payload.shippingCost,
+    p_shipping_distance_km: payload.shippingDistanceKm,
+    p_shipping_address: payload.shippingAddress,
+    p_payment_method: payload.paymentMethod,
+    p_order_number: orderNumber,
+  };
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc("create_order", rpcPayload);
+
+  if (!rpcError && rpcData?.id) {
+    return { orderId: rpcData.id as string, orderNumber: rpcData.order_number as string };
+  }
+
+  const { data: fnData, error: fnError } = await supabase.functions.invoke("create-order", {
+    body: {
+      ...payload,
+      orderNumber,
+      userId,
+    },
+  });
+
+  if (!fnError && fnData?.orderId) {
+    return { orderId: fnData.orderId, orderNumber: fnData.orderNumber };
+  }
 
   const { data, error } = await supabase
     .from("orders")
     .insert({
-      user_id: payload.userId?.startsWith("local-") ? null : (payload.userId ?? null),
+      user_id: userId,
       customer_email: payload.customerEmail,
       customer_name: payload.customerName,
       items: payload.items,
+      subtotal: payload.subtotal,
+      discount_amount: payload.discount,
+      promo_code: payload.promoCode ?? null,
       total: payload.total,
       shipping_cost: payload.shippingCost,
       shipping_distance_km: payload.shippingDistanceKm,
@@ -63,7 +102,7 @@ export async function createOrder(payload: OrderPayload): Promise<{ orderId: str
     .single();
 
   if (error || !data) {
-    return { error: error?.message || "Unable to create order. Please try again." };
+    return { error: error?.message || fnData?.error || rpcError?.message || "Unable to create order. Please try again." };
   }
   return { orderId: data.id, orderNumber: data.order_number };
 }
@@ -122,9 +161,22 @@ export async function fetchOrderByNumber(orderNumber: string): Promise<Order | n
   };
 }
 
-export async function markOrderPaid(orderId: string, stripeSessionId?: string): Promise<void> {
+export async function markOrderPaid(orderId: string, stripeSessionId?: string, paymentMethod?: string): Promise<void> {
   if (!isSupabaseConfigured) return;
   await supabase.functions.invoke("mark-order-paid", {
-    body: { orderId, stripeSessionId },
+    body: { orderId, stripeSessionId, paymentMethod },
   });
+}
+
+export async function validateCartStock(items: CartItem[]): Promise<string | null> {
+  if (!isSupabaseConfigured) return null;
+
+  for (const item of items) {
+    const { data } = await supabase.from("products").select("stock, name").eq("id", item.id).maybeSingle();
+    if (!data) continue;
+    if ((data.stock ?? 0) < item.quantity) {
+      return `Insufficient stock for ${data.name}. Only ${data.stock ?? 0} available.`;
+    }
+  }
+  return null;
 }

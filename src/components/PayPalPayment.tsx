@@ -18,21 +18,42 @@ export default function PayPalPayment({ orderId, orderNumber, total, onSuccess, 
     <PayPalScriptProvider options={{ clientId, currency: "USD", intent: "capture" }}>
       <PayPalButtons
         style={{ layout: "vertical", color: "gold", shape: "rect", label: "paypal", height: 48 }}
-        createOrder={async () => {
+        createOrder={async (_data, actions) => {
           const result = await createPayPalOrder({ orderId, orderNumber, total });
-          if ("error" in result) {
-            onError(result.error);
-            throw new Error(result.error);
+          if (!("error" in result)) return result.paypalOrderId;
+
+          if (actions.order) {
+            return actions.order.create({
+              purchase_units: [{
+                reference_id: orderId,
+                description: `YKonline Shop order ${orderNumber}`,
+                amount: { currency_code: "USD", value: total.toFixed(2) },
+              }],
+            });
           }
-          return result.paypalOrderId;
+
+          onError(result.error);
+          throw new Error(result.error);
         }}
-        onApprove={async (data) => {
-          const result = await capturePayPalOrder(data.orderID, orderId);
-          if (!result.success) {
-            onError(result.error || "PayPal capture failed.");
+        onApprove={async (data, actions) => {
+          let captured = false;
+
+          if (data.orderID) {
+            const result = await capturePayPalOrder(data.orderID, orderId);
+            captured = result.success;
+          }
+
+          if (!captured && actions.order) {
+            const details = await actions.order.capture();
+            captured = details?.status === "COMPLETED";
+          }
+
+          if (!captured) {
+            onError("PayPal capture failed. Please try again.");
             return;
           }
-          await markOrderPaid(orderId);
+
+          await markOrderPaid(orderId, undefined, "paypal");
           onSuccess();
         }}
         onError={() => onError("PayPal payment failed. Please try again.")}
