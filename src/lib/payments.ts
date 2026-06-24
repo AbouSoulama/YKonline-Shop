@@ -1,37 +1,80 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
+import { getCheckoutCancelUrl, getCheckoutSuccessUrl } from "./siteUrl";
 
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 
-export const isStripeConfigured = Boolean(stripePublishableKey);
+export const isStripeConfigured = Boolean(stripePublishableKey?.startsWith("pk_"));
+export const isPayPalConfigured = Boolean(paypalClientId);
 
-export async function createCheckoutSession(params: {
+export function getStripePublishableKey() {
+  return isStripeConfigured ? stripePublishableKey : null;
+}
+
+export function getPayPalClientId() {
+  return isPayPalConfigured ? paypalClientId : null;
+}
+
+export async function createCardPaymentIntent(orderId: string): Promise<{ clientSecret: string } | { error: string }> {
+  if (!isSupabaseConfigured) return { error: "Payment system not configured." };
+
+  const { data, error } = await supabase.functions.invoke("create-payment-intent", {
+    body: { orderId },
+  });
+
+  if (error) return { error: error.message };
+  if (data?.error) return { error: data.error };
+  if (!data?.clientSecret) return { error: "Could not initialize card payment." };
+  return { clientSecret: data.clientSecret };
+}
+
+export async function createStripeCheckout(params: {
   orderId: string;
   orderNumber: string;
-  paymentMethod: "card" | "paypal" | "stripe";
-  successUrl: string;
-  cancelUrl: string;
 }): Promise<{ url: string } | { error: string }> {
-  if (!isSupabaseConfigured) {
-    return { error: "Payment system not configured. Please contact support." };
-  }
+  if (!isSupabaseConfigured) return { error: "Payment system not configured." };
 
   const { data, error } = await supabase.functions.invoke("create-checkout", {
+    body: {
+      orderId: params.orderId,
+      orderNumber: params.orderNumber,
+      paymentMethod: "stripe",
+      successUrl: getCheckoutSuccessUrl(),
+      cancelUrl: getCheckoutCancelUrl(),
+    },
+  });
+
+  if (error) return { error: error.message };
+  if (data?.error) return { error: data.error };
+  if (!data?.url) return { error: "Stripe Checkout could not be created." };
+  return { url: data.url };
+}
+
+export async function createPayPalOrder(params: {
+  orderId: string;
+  orderNumber: string;
+  total: number;
+}): Promise<{ paypalOrderId: string } | { error: string }> {
+  if (!isSupabaseConfigured) return { error: "Payment system not configured." };
+
+  const { data, error } = await supabase.functions.invoke("create-paypal-order", {
     body: params,
   });
 
-  if (error) {
-    return { error: error.message || "Unable to start payment. Please try again." };
-  }
+  if (error) return { error: error.message };
+  if (data?.error) return { error: data.error };
+  if (!data?.paypalOrderId) return { error: "PayPal order could not be created." };
+  return { paypalOrderId: data.paypalOrderId };
+}
 
-  if (data?.error) {
-    return { error: data.error };
-  }
+export async function capturePayPalOrder(paypalOrderId: string, orderId: string): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("capture-paypal-order", {
+    body: { paypalOrderId, orderId },
+  });
 
-  if (!data?.url) {
-    return { error: "Payment session could not be created." };
-  }
-
-  return { url: data.url };
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: data?.status === "COMPLETED" };
 }
 
 export async function verifyCheckoutSession(sessionId: string): Promise<{ paid: boolean; orderId?: string }> {

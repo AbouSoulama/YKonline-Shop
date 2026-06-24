@@ -1,57 +1,58 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, Truck, CreditCard, Check, ChevronLeft, Lock, Loader2, MapPin, AlertCircle } from "lucide-react";
 import { useCart, formatPrice } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { calculateShipping, STORE_ADDRESS } from "../lib/shipping";
 import { createOrder } from "../lib/orders";
-import { createCheckoutSession } from "../lib/payments";
+import {
+  createCardPaymentIntent,
+  createStripeCheckout,
+  isStripeConfigured,
+  isPayPalConfigured,
+} from "../lib/payments";
 import { validateEmail, validateName, validatePhone } from "../lib/validation";
+import { CreditCardLogo, PayPalLogo, StripeLogo } from "../components/PaymentLogos";
+import CardPayment from "../components/CardPayment";
+import PayPalPayment from "../components/PayPalPayment";
 
-const PAYMENT_METHODS = [
+type PaymentId = "card" | "paypal" | "stripe";
+
+const PAYMENT_METHODS: { id: PaymentId; label: string; Logo: typeof CreditCardLogo; desc: string }[] = [
   {
-    id: "card" as const,
+    id: "card",
     label: "Credit Card",
-    logo: (
-      <svg viewBox="0 0 48 32" className="h-8 w-12" aria-hidden="true">
-        <rect width="48" height="32" rx="4" fill="#1A1F71" />
-        <text x="24" y="20" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">VISA</text>
-      </svg>
-    ),
+    Logo: CreditCardLogo,
+    desc: "Pay securely with Visa, Mastercard or Amex via Stripe.",
   },
   {
-    id: "paypal" as const,
+    id: "paypal",
     label: "PayPal",
-    logo: (
-      <svg viewBox="0 0 48 32" className="h-8 w-12" aria-hidden="true">
-        <rect width="48" height="32" rx="4" fill="#003087" />
-        <text x="24" y="14" textAnchor="middle" fill="#009CDE" fontSize="8" fontWeight="bold" fontFamily="Arial">Pay</text>
-        <text x="24" y="24" textAnchor="middle" fill="#012169" fontSize="8" fontWeight="bold" fontFamily="Arial">Pal</text>
-      </svg>
-    ),
+    Logo: PayPalLogo,
+    desc: "Pay with your PayPal account — processed directly by PayPal.",
   },
   {
-    id: "stripe" as const,
-    label: "Stripe",
-    logo: (
-      <svg viewBox="0 0 48 32" className="h-8 w-12" aria-hidden="true">
-        <rect width="48" height="32" rx="4" fill="#635BFF" />
-        <text x="24" y="20" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="Arial">stripe</text>
-      </svg>
-    ),
+    id: "stripe",
+    label: "Stripe Checkout",
+    Logo: StripeLogo,
+    desc: "Redirect to Stripe's secure checkout page (card, Apple Pay, Google Pay).",
   },
 ];
 
 export default function Checkout() {
-  const { items, subtotal, discount, shipping, shippingDistanceKm, setShippingCost, total, setIsOpen } = useCart();
+  const navigate = useNavigate();
+  const { items, subtotal, discount, shipping, shippingDistanceKm, setShippingCost, total, clearCart, setIsOpen } = useCart();
   const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [payment, setPayment] = useState<(typeof PAYMENT_METHODS)[number]["id"]>("stripe");
+  const [payment, setPayment] = useState<PaymentId>("card");
   const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [quote, setQuote] = useState<{ cost: number; expressCost: number; distanceKm: number } | null>(null);
   const [calculatingShipping, setCalculatingShipping] = useState(false);
+  const [orderInfo, setOrderInfo] = useState<{ orderId: string; orderNumber: string } | null>(null);
+  const [cardSecret, setCardSecret] = useState<string | null>(null);
+  const [loadingCard, setLoadingCard] = useState(false);
 
   const [form, setForm] = useState({
     email: user?.email ?? "",
@@ -65,6 +66,30 @@ export default function Checkout() {
 
   const activeShipping = shippingMethod === "express" && quote ? quote.expressCost : (quote?.cost ?? shipping);
   const orderTotal = subtotal - discount + activeShipping;
+
+  useEffect(() => {
+    if (step !== 3 || payment !== "card" || !orderInfo) {
+      setCardSecret(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingCard(true);
+    setError("");
+
+    createCardPaymentIntent(orderInfo.orderId).then((result) => {
+      if (cancelled) return;
+      if ("error" in result) {
+        setError(result.error);
+        setCardSecret(null);
+      } else {
+        setCardSecret(result.clientSecret);
+      }
+      setLoadingCard(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [step, payment, orderInfo]);
 
   if (items.length === 0) {
     return (
@@ -104,6 +129,30 @@ export default function Checkout() {
     setCalculatingShipping(false);
   };
 
+  const buildOrderPayload = (finalShipping: number, finalTotal: number) => ({
+    customerEmail: form.email.trim().toLowerCase(),
+    customerName: `${form.firstName.trim()} ${form.lastName.trim()}`,
+    items,
+    subtotal,
+    discount,
+    shippingCost: finalShipping,
+    shippingDistanceKm: quote?.distanceKm ?? shippingDistanceKm,
+    total: finalTotal,
+    paymentMethod: payment,
+    shippingAddress: {
+      address: form.address.trim(),
+      city: form.city.trim(),
+      country: form.country.trim(),
+      phone: form.phone.trim(),
+    },
+    userId: user?.id,
+  });
+
+  const handlePaymentSuccess = () => {
+    clearCart();
+    navigate(`/checkout/success?order=${orderInfo?.orderNumber ?? ""}`);
+  };
+
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -127,56 +176,50 @@ export default function Checkout() {
     if (step === 2) {
       const cost = shippingMethod === "express" && quote ? quote.expressCost : (quote?.cost ?? 0);
       setShippingCost(cost, quote?.distanceKm ?? 0);
+      const finalTotal = subtotal - discount + cost;
+
+      setLoading(true);
+      const order = await createOrder(buildOrderPayload(cost, finalTotal));
+      setLoading(false);
+
+      if ("error" in order) {
+        setError(order.error);
+        return;
+      }
+
+      setOrderInfo(order);
       setStep(3);
       return;
     }
 
-    // Step 3 — real payment via Stripe
-    setLoading(true);
-    const finalShipping = shippingMethod === "express" && quote ? quote.expressCost : (quote?.cost ?? shipping);
-    const finalTotal = subtotal - discount + finalShipping;
+    // Stripe Checkout redirect
+    if (payment === "stripe") {
+      if (!isStripeConfigured) {
+        setError("Stripe is not configured. Set VITE_STRIPE_PUBLISHABLE_KEY (pk_test_...) in your environment.");
+        return;
+      }
+      if (!orderInfo) {
+        setError("Order not found. Please go back and try again.");
+        return;
+      }
 
-    const order = await createOrder({
-      customerEmail: form.email.trim().toLowerCase(),
-      customerName: `${form.firstName.trim()} ${form.lastName.trim()}`,
-      items,
-      subtotal,
-      discount,
-      shippingCost: finalShipping,
-      shippingDistanceKm: quote?.distanceKm ?? shippingDistanceKm,
-      total: finalTotal,
-      paymentMethod: payment,
-      shippingAddress: {
-        address: form.address.trim(),
-        city: form.city.trim(),
-        country: form.country.trim(),
-        phone: form.phone.trim(),
-      },
-      userId: user?.id,
-    });
-
-    if (!order) {
-      setError("Unable to create order. Please try again.");
+      setLoading(true);
+      const checkout = await createStripeCheckout({
+        orderId: orderInfo.orderId,
+        orderNumber: orderInfo.orderNumber,
+      });
       setLoading(false);
-      return;
+
+      if ("error" in checkout) {
+        setError(checkout.error);
+        return;
+      }
+
+      window.location.href = checkout.url;
     }
-
-    const checkout = await createCheckoutSession({
-      orderId: order.orderId,
-      orderNumber: order.orderNumber,
-      paymentMethod: payment,
-      successUrl: `${window.location.origin}/checkout/success`,
-      cancelUrl: `${window.location.origin}/checkout`,
-    });
-
-    if ("error" in checkout) {
-      setError(checkout.error);
-      setLoading(false);
-      return;
-    }
-
-    window.location.href = checkout.url;
   };
+
+  const selectedMethod = PAYMENT_METHODS.find(p => p.id === payment)!;
 
   return (
     <div className="fade-in">
@@ -257,39 +300,95 @@ export default function Checkout() {
           )}
 
           {step === 3 && (
-            <div className="bg-white rounded-3xl p-6 md:p-8 card-shadow border border-cream">
-              <h2 className="font-display text-2xl font-bold mb-5">Payment method</h2>
-              <p className="text-sm text-gray-500 mb-4">Payments are processed securely via Stripe. No card data is stored on our servers.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                {PAYMENT_METHODS.map((p) => (
-                  <button type="button" key={p.id} onClick={() => setPayment(p.id)} className={`flex flex-col items-center gap-3 rounded-2xl border p-4 text-sm font-semibold transition-colors ${payment === p.id ? "border-green bg-green-light/30 text-green" : "border-cream text-gray-600 hover:border-green"}`}>
-                    {p.logo}
-                    {p.label}
-                  </button>
-                ))}
+            <div className="bg-white rounded-3xl p-6 md:p-8 card-shadow border border-cream space-y-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold mb-5">Payment method</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {PAYMENT_METHODS.map((p) => (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => setPayment(p.id)}
+                      className={`flex flex-col items-center gap-3 rounded-2xl border p-5 text-sm font-semibold transition-colors ${payment === p.id ? "border-green bg-green-light/30 text-green ring-2 ring-green/20" : "border-cream text-gray-600 hover:border-green"}`}
+                    >
+                      <p.Logo className="h-8" />
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="rounded-2xl bg-cream/40 p-4 text-sm text-gray-600">
-                {payment === "paypal"
-                  ? "You will be redirected to PayPal via Stripe to complete your payment securely."
-                  : "You will be redirected to Stripe Checkout to enter your payment details securely."}
+
+              <div className="rounded-2xl bg-cream/40 p-5 border border-cream">
+                <p className="text-sm text-gray-700 mb-4">{selectedMethod.desc}</p>
+
+                {payment === "card" && (
+                  <>
+                    {!isStripeConfigured && (
+                      <p className="text-red-600 text-sm">Configure VITE_STRIPE_PUBLISHABLE_KEY with a key starting with pk_test_ or pk_live_.</p>
+                    )}
+                    {loadingCard && (
+                      <div className="flex items-center gap-2 text-gray-500 py-4"><Loader2 size={18} className="animate-spin" /> Preparing secure card form...</div>
+                    )}
+                    {cardSecret && orderInfo && (
+                      <CardPayment
+                        clientSecret={cardSecret}
+                        orderId={orderInfo.orderId}
+                        total={orderTotal}
+                        onSuccess={handlePaymentSuccess}
+                        onError={setError}
+                      />
+                    )}
+                  </>
+                )}
+
+                {payment === "paypal" && (
+                  <>
+                    {!isPayPalConfigured && (
+                      <p className="text-red-600 text-sm">Configure VITE_PAYPAL_CLIENT_ID in your environment.</p>
+                    )}
+                    {orderInfo && isPayPalConfigured && (
+                      <PayPalPayment
+                        orderId={orderInfo.orderId}
+                        orderNumber={orderInfo.orderNumber}
+                        total={orderTotal}
+                        onSuccess={handlePaymentSuccess}
+                        onError={setError}
+                      />
+                    )}
+                  </>
+                )}
+
+                {payment === "stripe" && (
+                  <p className="text-sm text-gray-600">Click the button below to open Stripe Checkout in a new secure page.</p>
+                )}
               </div>
-              <div className="mt-6 flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> SSL encrypted · PCI compliant via Stripe</div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> SSL encrypted · PCI compliant</div>
             </div>
           )}
 
           <div className="flex justify-between gap-3">
-            {step > 1 && <button type="button" onClick={() => setStep(step - 1)} className="btn-outline" disabled={loading}>Back</button>}
-            <div className="ml-auto">
-              <button type="submit" className="btn-primary flex items-center gap-2" disabled={loading || calculatingShipping}>
-                {loading && <Loader2 size={18} className="animate-spin" />}
-                {step < 3 ? "Continue" : `Pay ${formatPrice(orderTotal)}`}
+            {step > 1 && (
+              <button type="button" onClick={() => { setStep(step - 1); if (step === 3) setOrderInfo(null); }} className="btn-outline" disabled={loading}>
+                Back
               </button>
-            </div>
+            )}
+            {(step < 3 || payment === "stripe") && (
+              <div className="ml-auto">
+                <button type="submit" className="btn-primary flex items-center gap-2" disabled={loading || calculatingShipping}>
+                  {(loading || calculatingShipping) && <Loader2 size={18} className="animate-spin" />}
+                  {step < 3 ? "Continue" : `Pay ${formatPrice(orderTotal)} with Stripe`}
+                </button>
+              </div>
+            )}
           </div>
         </form>
 
         <aside className="bg-cream/40 rounded-3xl p-6 h-fit lg:sticky lg:top-32">
           <h3 className="font-display font-bold text-lg mb-4">Order summary</h3>
+          {orderInfo && (
+            <p className="text-xs text-gray-500 mb-3">Order #{orderInfo.orderNumber}</p>
+          )}
           <div className="space-y-3 mb-4 max-h-80 overflow-y-auto">
             {items.map((i) => (
               <div key={i.id} className="flex gap-3">
@@ -320,7 +419,7 @@ export default function Checkout() {
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
             <div className="flex items-center gap-1"><ShieldCheck size={14} className="text-green" /> Secure payment</div>
             <div className="flex items-center gap-1"><Truck size={14} className="text-green" /> Distance-based</div>
-            <div className="flex items-center gap-1"><CreditCard size={14} className="text-green" /> Stripe & PayPal</div>
+            <div className="flex items-center gap-1"><CreditCard size={14} className="text-green" /> Card · PayPal · Stripe</div>
             <div className="flex items-center gap-1"><Check size={14} className="text-green" /> Satisfaction</div>
           </div>
         </aside>

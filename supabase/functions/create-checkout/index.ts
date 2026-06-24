@@ -67,12 +67,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const paymentMethodTypes: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] =
-      paymentMethod === "paypal" ? ["paypal"] : ["card"];
-
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: paymentMethodTypes,
+      payment_method_types: ["card", "link"],
       line_items: lineItems,
       customer_email: order.customer_email ?? undefined,
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&order=${orderNumber}`,

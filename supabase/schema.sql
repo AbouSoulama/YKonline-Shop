@@ -139,9 +139,9 @@ CREATE POLICY "Users read own orders"
   ON orders FOR SELECT
   USING (auth.uid() = user_id OR public.is_admin());
 
-CREATE POLICY "Users create own orders"
+CREATE POLICY "Anyone can create orders"
   ON orders FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (user_id IS NULL OR auth.uid() = user_id);
 
 CREATE POLICY "Admins manage orders"
   ON orders FOR ALL

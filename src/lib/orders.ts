@@ -37,15 +37,17 @@ function generateOrderNumber(): string {
   return `YK-${Date.now().toString().slice(-8)}`;
 }
 
-export async function createOrder(payload: OrderPayload): Promise<{ orderId: string; orderNumber: string } | null> {
-  if (!isSupabaseConfigured) return null;
+export async function createOrder(payload: OrderPayload): Promise<{ orderId: string; orderNumber: string } | { error: string }> {
+  if (!isSupabaseConfigured) {
+    return { error: "Database not configured. Please contact support." };
+  }
 
   const orderNumber = generateOrderNumber();
 
   const { data, error } = await supabase
     .from("orders")
     .insert({
-      user_id: payload.userId ?? null,
+      user_id: payload.userId?.startsWith("local-") ? null : (payload.userId ?? null),
       customer_email: payload.customerEmail,
       customer_name: payload.customerName,
       items: payload.items,
@@ -60,7 +62,9 @@ export async function createOrder(payload: OrderPayload): Promise<{ orderId: str
     .select("id, order_number")
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    return { error: error?.message || "Unable to create order. Please try again." };
+  }
   return { orderId: data.id, orderNumber: data.order_number };
 }
 
@@ -120,8 +124,7 @@ export async function fetchOrderByNumber(orderNumber: string): Promise<Order | n
 
 export async function markOrderPaid(orderId: string, stripeSessionId?: string): Promise<void> {
   if (!isSupabaseConfigured) return;
-  await supabase.from("orders").update({
-    status: "paid",
-    stripe_session_id: stripeSessionId ?? null,
-  }).eq("id", orderId);
+  await supabase.functions.invoke("mark-order-paid", {
+    body: { orderId, stripeSessionId },
+  });
 }

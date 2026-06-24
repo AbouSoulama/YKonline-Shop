@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { validateEmail, validateName, validatePassword } from "../lib/validation";
+import { getAuthRedirectUrl } from "../lib/siteUrl";
+import { sendConfirmationEmail } from "../lib/authEmail";
 
 export interface UserAccount {
   id: string;
@@ -250,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         data: { name: name.trim() },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: getAuthRedirectUrl(),
       },
     });
 
@@ -259,9 +261,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (data.user && !data.session) {
+      try {
+        await sendConfirmationEmail(normalizedEmail, name.trim());
+      } catch {
+        // Supabase resend may still work even if edge function fails
+      }
       return {
         success: true,
-        error: "Account created! Check your email to confirm, then log in.",
+        error: "Account created! Check your email (and spam folder) to confirm, then log in.",
       };
     }
 
