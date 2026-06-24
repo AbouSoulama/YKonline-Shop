@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Minus, Plus, ShoppingCart, Truck, ShieldCheck, RotateCcw, Star, Check, ChevronRight, Heart, Share2 } from "lucide-react";
 import { useProducts } from "../context/ProductsContext";
 import { useReviews } from "../context/ReviewContext";
-import { useCart, formatPrice, FREE_SHIPPING_AMOUNT } from "../context/CartContext";
+import { useCart, formatPrice } from "../context/CartContext";
 import ProductCard from "../components/ProductCard";
 
 export default function Product() {
@@ -107,8 +107,8 @@ export default function Product() {
 
           {/* Info badges */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-cream pt-6">
-            <div className="flex items-start gap-2"><Truck size={18} className="text-green shrink-0 mt-0.5" /><div><p className="text-sm font-semibold">Fast shipping</p><p className="text-xs text-gray-500">Free above ${FREE_SHIPPING_AMOUNT}</p></div></div>
-            <div className="flex items-start gap-2"><ShieldCheck size={18} className="text-green shrink-0 mt-0.5" /><div><p className="text-sm font-semibold">Secure payment</p><p className="text-xs text-gray-500">Card, PayPal, Mobile money</p></div></div>
+            <div className="flex items-start gap-2"><Truck size={18} className="text-green shrink-0 mt-0.5" /><div><p className="text-sm font-semibold">Distance-based shipping</p><p className="text-xs text-gray-500">$0.69/km from our store</p></div></div>
+            <div className="flex items-start gap-2"><ShieldCheck size={18} className="text-green shrink-0 mt-0.5" /><div><p className="text-sm font-semibold">Secure payment</p><p className="text-xs text-gray-500">Stripe & PayPal</p></div></div>
             <div className="flex items-start gap-2"><RotateCcw size={18} className="text-green shrink-0 mt-0.5" /><div><p className="text-sm font-semibold">Satisfaction</p><p className="text-xs text-gray-500">Easy returns</p></div></div>
           </div>
         </div>

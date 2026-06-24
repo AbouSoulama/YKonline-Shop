@@ -23,14 +23,14 @@ interface CartContextValue {
   setPromoCode: (v: string) => void;
   discount: number;
   shipping: number;
+  shippingDistanceKm: number;
+  setShippingCost: (cost: number, distanceKm?: number) => void;
   total: number;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "ykonline_cart";
-const FREE_SHIPPING_THRESHOLD = 50;
-const SHIPPING_FLAT = 4.9;
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -43,10 +43,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   const [isOpen, setIsOpen] = useState(false);
   const [promoCode, setPromoCode] = useState("");
+  const [shippingCost, setShippingCostState] = useState(0);
+  const [shippingDistanceKm, setShippingDistanceKm] = useState(0);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
+
+  const setShippingCost = (cost: number, distanceKm = 0) => {
+    setShippingCostState(cost);
+    setShippingDistanceKm(distanceKm);
+  };
 
   const addItem: CartContextValue["addItem"] = (item, qty = 1) => {
     setItems((prev) => {
@@ -64,7 +71,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, qty) } : i))
     );
-  const clearCart = () => setItems([]);
+  const clearCart = () => {
+    setItems([]);
+    setShippingCostState(0);
+    setShippingDistanceKm(0);
+  };
 
   const totalItems = useMemo(() => items.reduce((s, i) => s + i.quantity, 0), [items]);
   const subtotal = useMemo(() => items.reduce((s, i) => s + i.price * i.quantity, 0), [items]);
@@ -75,11 +86,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return 0;
   }, [promoCode, subtotal]);
 
-  const shipping = useMemo(() => {
-    if (subtotal === 0) return 0;
-    if (subtotal - discount >= FREE_SHIPPING_THRESHOLD) return 0;
-    return SHIPPING_FLAT;
-  }, [subtotal, discount]);
+  const shipping = items.length === 0 ? 0 : shippingCost;
 
   const total = subtotal - discount + shipping;
 
@@ -99,6 +106,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setPromoCode,
         discount,
         shipping,
+        shippingDistanceKm,
+        setShippingCost,
         total,
       }}
     >
@@ -114,4 +123,3 @@ export function useCart() {
 }
 
 export const formatPrice = (n: number) => `$${n.toFixed(2)}`;
-export const FREE_SHIPPING_AMOUNT = FREE_SHIPPING_THRESHOLD;

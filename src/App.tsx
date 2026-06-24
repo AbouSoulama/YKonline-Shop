@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -14,10 +14,13 @@ import Product from "./pages/Product";
 import About from "./pages/About";
 import Routines from "./pages/Routines";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import Account from "./pages/Account";
 import Checkout from "./pages/Checkout";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import AuthCallback from "./pages/AuthCallback";
 import Legal from "./pages/Legal";
 import Admin from "./pages/Admin";
 
@@ -49,10 +52,12 @@ function StorefrontLayout() {
           <Route path="/about" element={<About />} />
           <Route path="/routines" element={<Routines />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/account" element={<Account />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
           <Route path="/legal" element={<Legal page="legal" />} />
           <Route path="/terms" element={<Legal page="terms" />} />
           <Route path="/privacy" element={<Legal page="privacy" />} />
@@ -70,13 +75,14 @@ function StorefrontLayout() {
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <AuthProvider>
       <ProductsProvider>
       <ReviewProvider>
       <CartProvider>
         <ScrollToTop />
         <Routes>
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/*" element={<StorefrontLayout />} />
         </Routes>
@@ -84,6 +90,6 @@ export default function App() {
       </ReviewProvider>
       </ProductsProvider>
       </AuthProvider>
-    </HashRouter>
+    </BrowserRouter>
   );
 }

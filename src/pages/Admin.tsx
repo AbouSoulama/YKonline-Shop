@@ -9,13 +9,18 @@ import {
 import { SITE_EMAIL } from "../constants/site";
 import { useAuth, confirmLogout } from "../context/AuthContext";
 import { useReviews } from "../context/ReviewContext";
+import { useProducts } from "../context/ProductsContext";
+import { fetchOrders, updateOrderStatus as dbUpdateOrderStatus } from "../lib/orders";
+import { fetchAllPosts, createBlogPost, deleteBlogPost, toggleBlogPostStatus, type BlogPost as BlogPostType } from "../lib/blog";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { slugify } from "../constants/site";
 
 // ── Types ──
 interface Product {
   id: string; name: string; tagline: string; description: string; size: string; type: string; price: number; oldPrice: number; stock: number; status: "Active" | "Draft"; image: string; badge: string; ingredients: string; storage: string; usage: string[];
 }
 interface Order {
-  id: string; customer: string; email: string; date: string; total: number; status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled"; items: number;
+  dbId: string; id: string; customer: string; email: string; date: string; total: number; status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled"; items: number;
 }
 interface Customer {
   id: string; name: string; email: string; orders: number; spent: number; joined: string;
@@ -74,17 +79,36 @@ type Tab = "dashboard" | "products" | "orders" | "customers" | "promos" | "blog"
 
 const statusColors: Record<string, string> = {
   Pending: "bg-yellow-100 text-yellow-700",
+  pending: "bg-yellow-100 text-yellow-700",
   Processing: "bg-blue-100 text-blue-700",
+  paid: "bg-blue-100 text-blue-700",
   Shipped: "bg-purple-100 text-purple-700",
   Delivered: "bg-green-100 text-green-700",
   Cancelled: "bg-red-100 text-red-700",
 };
+
+function mapOrderStatus(s: string): Order["status"] {
+  const m: Record<string, Order["status"]> = {
+    pending: "Pending", paid: "Processing", processing: "Processing",
+    shipped: "Shipped", delivered: "Delivered", cancelled: "Cancelled",
+  };
+  return m[s.toLowerCase()] ?? "Pending";
+}
+
+function toDbStatus(s: Order["status"]): string {
+  const m: Record<Order["status"], string> = {
+    Pending: "pending", Processing: "paid", Shipped: "shipped",
+    Delivered: "delivered", Cancelled: "cancelled",
+  };
+  return m[s];
+}
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 // ── Component ──
 export default function Admin() {
   const { isAdmin, login, logout, refreshUser } = useAuth();
+  const { products: storeProducts } = useProducts();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
@@ -94,9 +118,10 @@ export default function Admin() {
 
   // Data states
   const [products, setProducts] = useState(initProducts);
-  const [orders, setOrders] = useState(initOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>(initCustomers);
   const [promos, setPromos] = useState(initPromos);
-  const [blog, setBlog] = useState(initBlog);
+  const [blog, setBlog] = useState<BlogPost[]>([]);
   const { reviews, approveReview: ctxApproveReview, deleteReview: ctxDeleteReview, pendingReviews } = useReviews();
 
   // Modals
@@ -109,6 +134,55 @@ export default function Admin() {
   useEffect(() => {
     if (isAdmin) refreshUser();
   }, [isAdmin, refreshUser]);
+
+  const loadAdminData = async () => {
+    const ordersData = await fetchOrders();
+    setOrders(ordersData.map(o => ({
+      dbId: o.id,
+      id: o.orderNumber,
+      customer: o.customerName,
+      email: o.customerEmail,
+      date: o.createdAt,
+      total: o.total,
+      status: mapOrderStatus(o.status),
+      items: o.items.length,
+    })));
+
+    const blogData = await fetchAllPosts();
+    setBlog(blogData.map(b => ({
+      id: b.id, title: b.title, category: b.category, status: b.status, date: b.date, views: b.views,
+    })));
+
+    if (isSupabaseConfigured) {
+      const { data: profiles } = await supabase.from("profiles").select("id, name, role, created_at");
+      if (profiles) {
+        setCustomers(profiles.filter(p => p.role === "customer").map((p, i) => ({
+          id: p.id,
+          name: p.name,
+          email: "",
+          orders: 0,
+          spent: 0,
+          joined: new Date(p.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        })));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) loadAdminData();
+  }, [isAdmin]);
+
+  // Sync products from store
+  useEffect(() => {
+    if (storeProducts.length) {
+      setProducts(storeProducts.map(p => ({
+        id: p.id, name: p.name, tagline: p.tagline, description: p.description,
+        size: p.size, type: p.type, price: p.price, oldPrice: p.oldPrice ?? 0,
+        stock: p.stock, status: "Active" as const, image: p.image, badge: p.badge ?? "",
+        ingredients: p.ingredients, storage: p.storage, usage: p.usage,
+      })));
+    }
+  }, [storeProducts]);
 
   // ── Login ──
   const handleLogin = async (e: React.FormEvent) => {
@@ -124,7 +198,7 @@ export default function Admin() {
   // ── Stats ──
   const totalRevenue = orders.filter(o => o.status !== "Cancelled").reduce((s, o) => s + o.total, 0);
   const totalOrders = orders.length;
-  const totalCustomers = initCustomers.length;
+  const totalCustomers = customers.length;
   const avgOrder = totalRevenue / (totalOrders || 1);
 
   // ── Product CRUD ──
@@ -137,7 +211,10 @@ export default function Admin() {
   };
 
   // ── Order status ──
-  const updateOrderStatus = (id: string, status: Order["status"]) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+  const updateOrderStatus = async (dbId: string, status: Order["status"]) => {
+    await dbUpdateOrderStatus(dbId, toDbStatus(status));
+    setOrders(prev => prev.map(o => o.dbId === dbId ? { ...o, status } : o));
+  };
 
   // ── Promo CRUD ──
   const savePromo = (p: Promo) => {
@@ -148,8 +225,22 @@ export default function Admin() {
   const togglePromo = (id: string) => setPromos(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
 
   // ── Blog ──
-  const toggleBlogStatus = (id: string) => setBlog(prev => prev.map(b => b.id === id ? { ...b, status: b.status === "Published" ? "Draft" : "Published" } : b));
-  const deleteBlog = (id: string) => { if (confirm("Delete this article?")) setBlog(prev => prev.filter(b => b.id !== id)); };
+  const toggleBlogStatus = async (id: string, current: "Published" | "Draft") => {
+    await toggleBlogPostStatus(id, current);
+    loadAdminData();
+  };
+  const deleteBlog = async (id: string) => {
+    if (confirm("Delete this article?")) {
+      await deleteBlogPost(id);
+      loadAdminData();
+    }
+  };
+  const saveBlogPost = async (post: BlogPostType) => {
+    const result = await createBlogPost(post);
+    if (!result.success) alert(result.error ?? "Failed to create article");
+    else loadAdminData();
+    setShowBlogModal(false);
+  };
 
   // ── Reviews ──
   const approveReview = (id: string) => ctxApproveReview(id);
@@ -158,7 +249,7 @@ export default function Admin() {
   // ── Export CSV ──
   const exportCSV = () => {
     const headers = "Name,Email,Orders,Total Spent,Joined\n";
-    const rows = initCustomers.map(c => `${c.name},${c.email},${c.orders},${fmt(c.spent)},${c.joined}`).join("\n");
+    const rows = customers.map(c => `${c.name},${c.email},${c.orders},${fmt(c.spent)},${c.joined}`).join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "ykonline-customers.csv"; a.click();
@@ -203,7 +294,7 @@ export default function Admin() {
     { id: "dashboard", icon: BarChart3, label: "Dashboard" },
     { id: "products", icon: Package, label: "Products", badge: products.length },
     { id: "orders", icon: ShoppingCart, label: "Orders", badge: orders.filter(o => o.status === "Pending").length },
-    { id: "customers", icon: Users, label: "Customers", badge: initCustomers.length },
+    { id: "customers", icon: Users, label: "Customers", badge: customers.length },
     { id: "promos", icon: Tag, label: "Promo Codes" },
     { id: "blog", icon: FileText, label: "Blog" },
     { id: "reviews", icon: Star, label: "Reviews", badge: pendingReviews.length },
@@ -415,7 +506,7 @@ export default function Admin() {
                         <div><p className="text-gray-400 text-xs mb-1">Customer</p><p className="font-semibold">{o.customer}</p><p className="text-xs text-gray-500">{o.email}</p></div>
                         <div><p className="text-gray-400 text-xs mb-1">Items</p><p className="font-semibold">{o.items} product(s)</p></div>
                         <div><p className="text-gray-400 text-xs mb-1">Update Status</p>
-                          <select value={o.status} onChange={e => updateOrderStatus(o.id, e.target.value as Order["status"])} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold focus:outline-none focus:border-green">
+                          <select value={o.status} onChange={e => updateOrderStatus(o.dbId, e.target.value as Order["status"])} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold focus:outline-none focus:border-green">
                             {["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map(s => <option key={s}>{s}</option>)}
                           </select>
                         </div>
@@ -431,7 +522,7 @@ export default function Admin() {
           {tab === "customers" && (
             <div className="fade-in">
               <div className="flex items-center justify-between mb-6">
-                <p className="text-sm text-gray-500">{initCustomers.length} customers</p>
+                <p className="text-sm text-gray-500">{customers.length} customers</p>
                 <button onClick={exportCSV} className="btn-outline !py-2.5 !text-sm"><Download size={16} /> Export CSV</button>
               </div>
               <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
@@ -445,7 +536,7 @@ export default function Admin() {
                       <th className="text-left py-4 px-5 font-bold text-gray-500 uppercase text-xs">Joined</th>
                     </tr></thead>
                     <tbody className="divide-y divide-gray-50">
-                      {initCustomers.map(c => (
+                      {customers.map(c => (
                         <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-3">
@@ -512,7 +603,7 @@ export default function Admin() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${b.status === "Published" ? "bg-green/10 text-green" : "bg-gray-100 text-gray-500"}`}>{b.status}</span>
-                      <button onClick={() => toggleBlogStatus(b.id)} className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-500" title="Toggle status"><Eye size={16} /></button>
+                      <button onClick={() => toggleBlogStatus(b.id, b.status)} className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-500" title="Toggle status"><Eye size={16} /></button>
                       <button onClick={() => deleteBlog(b.id)} className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
                   </div>
@@ -572,8 +663,8 @@ export default function Admin() {
                   <input defaultValue="+1 (301) 266-9830" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Free Shipping Threshold ($)</label>
-                  <input type="number" defaultValue={50} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white" />
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Shipping Rate</label>
+                  <input type="text" defaultValue="$0.69 per km from store" disabled className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Currency</label>
@@ -591,7 +682,7 @@ export default function Admin() {
       {/* ═══════ MODALS ═══════ */}
       {showProductModal && <ProductModal product={editingProduct} onSave={saveProduct} onClose={() => { setShowProductModal(false); setEditingProduct(null); }} />}
       {showPromoModal && <PromoModal onSave={savePromo} onClose={() => setShowPromoModal(false)} nextId={`PR${String(promos.length + 1).padStart(3, "0")}`} />}
-      {showBlogModal && <BlogModal onSave={(b) => { setBlog(prev => [...prev, b]); setShowBlogModal(false); }} onClose={() => setShowBlogModal(false)} nextId={`B${String(blog.length + 1).padStart(3, "0")}`} />}
+      {showBlogModal && <BlogModal onSave={saveBlogPost} onClose={() => setShowBlogModal(false)} />}
     </div>
   );
 }
@@ -736,14 +827,30 @@ function PromoModal({ onSave, onClose, nextId }: { onSave: (p: Promo) => void; o
   );
 }
 
-function BlogModal({ onSave, onClose, nextId }: { onSave: (b: BlogPost) => void; onClose: () => void; nextId: string }) {
+function BlogModal({ onSave, onClose }: { onSave: (b: BlogPostType) => void; onClose: () => void }) {
   const [title, setTitle] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [content, setContent] = useState("");
   const [category, setCategory] = useState("Guide");
   return (
     <Overlay onClose={onClose}>
       <h2 className="font-display text-2xl font-bold mb-5">New Blog Article</h2>
-      <form onSubmit={e => { e.preventDefault(); onSave({ id: nextId, title, category, status: "Draft", date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), views: 0 }); }} className="space-y-4">
+      <form onSubmit={e => {
+        e.preventDefault();
+        onSave({
+          slug: slugify(title),
+          title,
+          excerpt,
+          content: content || excerpt,
+          category,
+          readTime: "5 min",
+          color: "from-green to-green-dark",
+          status: "Draft",
+        });
+      }} className="space-y-4">
         <div><label className="block text-sm font-bold mb-1">Title</label><input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Article title" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green" /></div>
+        <div><label className="block text-sm font-bold mb-1">Excerpt</label><textarea required value={excerpt} onChange={e => setExcerpt(e.target.value)} rows={2} placeholder="Short summary" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green resize-none" /></div>
+        <div><label className="block text-sm font-bold mb-1">Content</label><textarea required value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Full article (use ## for headings)" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green resize-none" /></div>
         <div><label className="block text-sm font-bold mb-1">Category</label><select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-green"><option>Guide</option><option>Benefits</option><option>Hair care</option><option>Skin care</option><option>Routine</option></select></div>
         <div className="flex gap-3 pt-2">
           <button type="submit" className="btn-primary flex-1">Create Article</button>

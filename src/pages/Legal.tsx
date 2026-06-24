@@ -36,7 +36,7 @@ const sections: Record<string, Section[]> = {
   ],
   shipping: [
     { title: "Shipping methods", body: ["We offer several shipping methods: Standard (3-5 business days), Express (1-2 business days). Shipping costs are calculated according to your location and order weight."] },
-    { title: "Free shipping", body: ["Shipping is free for all orders above $50, before any applicable discount. This offer applies automatically at checkout."] },
+    { title: "Free shipping", body: ["Shipping is calculated automatically at checkout based on the distance from our store in Waldorf, MD ($0.69 per km)."] },
     { title: "Processing time", body: ["Orders placed before 2pm are generally prepared the same day. Orders placed on weekends or holidays are prepared the next business day."] },
     { title: "Returns & Refunds", body: ["You can return any unopened product in its original condition within 14 days of receipt. To initiate a return, contact our customer service with your order number.", "Once the return is received and inspected, a refund will be issued to your original payment method within 14 business days."] },
     { title: "Damaged or defective products", body: ["If you receive a damaged or defective product, please contact us immediately with photos. We will arrange a replacement or refund at our expense."] },

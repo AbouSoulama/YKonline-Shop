@@ -1,6 +1,6 @@
 import { X, Minus, Plus, ShoppingBag, Trash2, Tag, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useCart, formatPrice, FREE_SHIPPING_AMOUNT } from "../context/CartContext";
+import { useCart, formatPrice } from "../context/CartContext";
 import { useState } from "react";
 
 export default function CartDrawer() {
@@ -14,17 +14,12 @@ export default function CartDrawer() {
     }
   };
 
-  const progress = Math.min(100, ((subtotal - discount) / FREE_SHIPPING_AMOUNT) * 100);
-  const remaining = Math.max(0, FREE_SHIPPING_AMOUNT - (subtotal - discount));
-
   return (
     <>
-      {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/40 z-50 transition-opacity ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={() => setIsOpen(false)}
       />
-      {/* Drawer */}
       <aside
         className={`fixed top-0 right-0 h-full w-full sm:w-[440px] bg-white z-50 shadow-2xl transition-transform flex flex-col ${
           isOpen ? "translate-x-0" : "translate-x-full"
@@ -53,16 +48,9 @@ export default function CartDrawer() {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {subtotal < FREE_SHIPPING_AMOUNT && (
-                <div className="bg-orange-light border border-orange/20 rounded-2xl p-3 text-sm">
-                  <div className="flex items-center gap-2 text-orange-dark font-semibold mb-2">
-                    <Truck size={16} /> Add {formatPrice(remaining)} more for free shipping!
-                  </div>
-                  <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className="h-full bg-orange rounded-full transition-all" style={{ width: `${progress}%` }} />
-                  </div>
-                </div>
-              )}
+              <div className="bg-green-light border border-green/20 rounded-2xl p-3 text-sm flex items-center gap-2 text-green">
+                <Truck size={16} /> Shipping calculated at checkout based on your distance from our store ($0.69/km)
+              </div>
 
               {items.map((item) => (
                 <div key={item.id} className="flex gap-3 border border-cream rounded-2xl p-3">
@@ -109,10 +97,10 @@ export default function CartDrawer() {
             <div className="border-t border-cream p-5 space-y-2 bg-cream/30">
               <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal</span><span className="font-semibold">{formatPrice(subtotal)}</span></div>
               {discount > 0 && <div className="flex justify-between text-sm text-green"><span>Discount</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Shipping</span><span className="font-semibold">{shipping === 0 ? "Free" : formatPrice(shipping)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-600">Shipping</span><span className="font-semibold text-gray-400">At checkout</span></div>
               <div className="flex justify-between text-lg pt-2 border-t border-cream">
-                <span className="font-display font-semibold">Total</span>
-                <span className="font-display font-bold text-green">{formatPrice(total)}</span>
+                <span className="font-display font-semibold">Subtotal</span>
+                <span className="font-display font-bold text-green">{formatPrice(subtotal - discount)}</span>
               </div>
               <Link to="/checkout" onClick={() => setIsOpen(false)} className="btn-primary w-full mt-3">
                 Checkout
