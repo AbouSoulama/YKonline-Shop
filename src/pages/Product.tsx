@@ -6,14 +6,16 @@ import { useReviews } from "../context/ReviewContext";
 import { useAuth } from "../context/AuthContext";
 import { useCart, formatPrice } from "../context/CartContext";
 import { toggleWishlist, isInWishlist } from "../lib/account";
+import { discountPercent, stockLabel } from "../lib/productDisplay";
 import ProductCard from "../components/ProductCard";
 
 export default function Product() {
   const { id } = useParams();
   const { getProductById, getRelatedProducts } = useProducts();
   const product = getProductById(id || "");
-  const { getProductReviews } = useReviews();
+  const { getProductReviews, getProductRatingStats } = useReviews();
   const productReviews = getProductReviews(id || "");
+  const stats = product ? getProductRatingStats(product.id, { rating: product.rating, count: product.reviews }) : { rating: 0, count: 0 };
   const { addItem } = useCart();
   const { user } = useAuth();
   const [qty, setQty] = useState(1);
@@ -35,6 +37,8 @@ export default function Product() {
   }
 
   const related = getRelatedProducts(product.id);
+  const discount = discountPercent(product.price, product.oldPrice);
+  const stock = stockLabel(product.stock);
 
   const addToCart = () => {
     const err = addItem({ id: product.id, name: product.name, size: product.size, price: product.price, image: product.image }, qty, product.stock);
@@ -85,24 +89,27 @@ export default function Product() {
           <h1 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-3">{product.name}</h1>
           <div className="flex items-center gap-3 mb-4">
             <div className="flex">
-              {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={16} className={i < Math.round(product.rating) ? "text-orange fill-orange" : "text-gray-300"} />)}
+              {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={16} className={i < Math.round(stats.rating) ? "text-orange fill-orange" : "text-gray-300"} />)}
             </div>
-            <span className="text-sm text-gray-600">{product.rating} ({product.reviews} reviews)</span>
+            <span className="text-sm text-gray-600">{stats.rating} ({stats.count} reviews)</span>
           </div>
           <p className="text-lg text-gray-600 italic mb-5">"{product.tagline}"</p>
 
-          <div className="flex items-end gap-3 mb-6">
+          <div className="flex items-end gap-3 mb-6 flex-wrap">
             <span className="font-display text-4xl font-bold text-green">{formatPrice(product.price)}</span>
-            {product.oldPrice && <span className="text-xl text-gray-400 line-through mb-1">{formatPrice(product.oldPrice)}</span>}
-            {product.oldPrice && <span className="bg-orange text-white text-xs font-bold px-2 py-1 rounded-full mb-1">Save {formatPrice(product.oldPrice - product.price)}</span>}
+            {product.oldPrice && product.oldPrice > product.price && (
+              <span className="text-xl text-gray-400 line-through mb-1">{formatPrice(product.oldPrice)}</span>
+            )}
+            {discount !== null && (
+              <span className="bg-green text-white text-xs font-bold px-2 py-1 rounded-full mb-1">-{discount}%</span>
+            )}
+            {product.oldPrice && product.oldPrice > product.price && (
+              <span className="bg-orange text-white text-xs font-bold px-2 py-1 rounded-full mb-1">Save {formatPrice(product.oldPrice - product.price)}</span>
+            )}
           </div>
 
-          <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
-          {product.stock <= 0 ? (
-            <p className="text-red-600 font-semibold mb-4">Out of stock</p>
-          ) : (
-            <p className="text-sm text-gray-500 mb-4">{product.stock} in stock</p>
-          )}
+          <p className="text-gray-600 leading-relaxed mb-4">{product.description}</p>
+          <p className={`text-sm mb-6 ${stock.className}`}>{stock.text}</p>
 
           {/* Quantity + buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">

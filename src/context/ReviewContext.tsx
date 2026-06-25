@@ -22,6 +22,7 @@ interface ReviewContextValue {
   deleteReview: (id: string) => Promise<void>;
   getProductReviews: (productId: string) => Review[];
   getHomepageReviews: () => Review[];
+  getProductRatingStats: (productId: string, fallback?: { rating: number; count: number }) => { rating: number; count: number };
 }
 
 const ReviewContext = createContext<ReviewContextValue | null>(null);
@@ -132,23 +133,53 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   };
 
   const approveReview = async (id: string) => {
+    const review = reviews.find(r => r.id === id);
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("reviews").update({ approved: true }).eq("id", id);
       if (error) return;
     }
-    setReviews(prev => prev.map(r => r.id === id ? { ...r, approved: true } : r));
+    const updated = reviews.map(r => r.id === id ? { ...r, approved: true } : r);
+    setReviews(updated);
+    if (review?.productId) {
+      const approved = updated.filter(r => r.approved && r.productId === review.productId);
+      const count = approved.length;
+      const rating = count ? Math.round((approved.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10 : 0;
+      if (isSupabaseConfigured) {
+        await supabase.from("products").update({ reviews_count: count, rating: count ? rating : null }).eq("id", review.productId);
+      }
+    }
   };
 
   const deleteReview = async (id: string) => {
+    const review = reviews.find(r => r.id === id);
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("reviews").delete().eq("id", id);
       if (error) return;
     }
-    setReviews(prev => prev.filter(r => r.id !== id));
+    const updated = reviews.filter(r => r.id !== id);
+    setReviews(updated);
+    if (review?.productId) {
+      const approved = updated.filter(r => r.approved && r.productId === review.productId);
+      const count = approved.length;
+      const rating = count ? Math.round((approved.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10 : 0;
+      if (isSupabaseConfigured) {
+        await supabase.from("products").update({ reviews_count: count, rating: count ? rating : null }).eq("id", review.productId);
+      }
+    }
   };
 
   const getProductReviews = (productId: string) => {
     return reviews.filter(r => r.approved && r.productId === productId);
+  };
+
+  const getProductRatingStats = (productId: string, fallback?: { rating: number; count: number }) => {
+    const approved = reviews.filter(r => r.approved && r.productId === productId);
+    if (!approved.length) {
+      return { rating: fallback?.rating ?? 0, count: fallback?.count ?? 0 };
+    }
+    const count = approved.length;
+    const rating = Math.round((approved.reduce((sum, r) => sum + r.rating, 0) / count) * 10) / 10;
+    return { rating, count };
   };
 
   const getHomepageReviews = () => approvedReviews.slice(0, 6);
@@ -156,7 +187,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   return (
     <ReviewContext.Provider value={{
       reviews, approvedReviews, pendingReviews, loading,
-      addReview, approveReview, deleteReview, getProductReviews, getHomepageReviews,
+      addReview, approveReview, deleteReview, getProductReviews, getHomepageReviews, getProductRatingStats,
     }}>
       {children}
     </ReviewContext.Provider>

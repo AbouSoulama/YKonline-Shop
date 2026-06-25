@@ -40,3 +40,10 @@ CREATE POLICY "Admins read contact messages"
 
 -- Enable realtime for profile role updates
 ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
+
+-- Enable realtime for live product stock updates on the storefront
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE products;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

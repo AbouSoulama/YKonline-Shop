@@ -61,6 +61,43 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     fetchProducts();
   }, [fetchProducts]);
 
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const channel = supabase
+      .channel("products-stock")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "products" },
+        (payload) => {
+          const row = payload.new as ProductRow;
+          setProducts((prev) =>
+            prev.map((p) =>
+              p.id === row.id
+                ? {
+                    ...p,
+                    stock: row.stock ?? 0,
+                    price: Number(row.price),
+                    oldPrice: row.old_price ? Number(row.old_price) : undefined,
+                    reviews: row.reviews_count ?? p.reviews,
+                    rating: Number(row.rating ?? p.rating),
+                  }
+                : p,
+            ),
+          );
+        },
+      )
+      .subscribe();
+
+    const onFocus = () => { fetchProducts(); };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [fetchProducts]);
+
   const getProductById = (id: string) => products.find(p => p.id === id);
 
   const getRelatedProducts = (id: string, limit = 4) =>

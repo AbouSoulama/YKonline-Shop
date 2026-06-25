@@ -1,10 +1,13 @@
 import { X, Minus, Plus, ShoppingBag, Trash2, Tag, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCart, formatPrice } from "../context/CartContext";
+import { useProducts } from "../context/ProductsContext";
+import { stockLabel } from "../lib/productDisplay";
 import { useState } from "react";
 
 export default function CartDrawer() {
   const { items, isOpen, setIsOpen, removeItem, updateQuantity, subtotal, discount, shipping, total, promoCode, setPromoCode, appliedPromo, applyPromo, clearPromo, clearCart } = useCart();
+  const { getProductById } = useProducts();
   const [promoMsg, setPromoMsg] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
 
@@ -56,7 +59,11 @@ export default function CartDrawer() {
                 <Truck size={16} /> Shipping calculated at checkout based on your distance from our store ($0.69/km)
               </div>
 
-              {items.map((item) => (
+              {items.map((item) => {
+                const live = getProductById(item.id);
+                const maxStock = live?.stock;
+                const stock = live ? stockLabel(live.stock) : null;
+                return (
                 <div key={item.id} className="flex gap-3 border border-cream rounded-2xl p-3">
                   <img src={item.image} alt={item.name} className="w-20 h-20 rounded-xl object-cover bg-cream" />
                   <div className="flex-1">
@@ -67,13 +74,22 @@ export default function CartDrawer() {
                       </button>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{item.size}</p>
+                    {stock && <p className={`text-[11px] mt-1 ${stock.className}`}>{stock.text}</p>}
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border border-cream rounded-full">
-                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="px-2 py-1 text-green" aria-label="Decrease">
+                        <button onClick={() => updateQuantity(item.id, item.quantity - 1, maxStock)} className="px-2 py-1 text-green" aria-label="Decrease">
                           <Minus size={14} />
                         </button>
                         <span className="px-3 text-sm font-semibold">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="px-2 py-1 text-green" aria-label="Increase">
+                        <button
+                          onClick={() => {
+                            const err = updateQuantity(item.id, item.quantity + 1, maxStock);
+                            if (err) alert(err);
+                          }}
+                          className="px-2 py-1 text-green disabled:opacity-40"
+                          aria-label="Increase"
+                          disabled={maxStock !== undefined && item.quantity >= maxStock}
+                        >
                           <Plus size={14} />
                         </button>
                       </div>
@@ -81,7 +97,7 @@ export default function CartDrawer() {
                     </div>
                   </div>
                 </div>
-              ))}
+              );})}
 
               <form onSubmit={handleApply} className="flex gap-2 pt-2">
                 <div className="relative flex-1">

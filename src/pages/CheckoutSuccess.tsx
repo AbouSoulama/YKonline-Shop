@@ -4,11 +4,13 @@ import { Check, Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { verifyCheckoutSession } from "../lib/payments";
 import { fetchOrderByNumber } from "../lib/orders";
-import { useCart } from "../context/CartContext";
+import { useCart, formatPrice } from "../context/CartContext";
+import { useProducts } from "../context/ProductsContext";
 
 export default function CheckoutSuccess() {
   const [params] = useSearchParams();
   const { clearCart } = useCart();
+  const { refreshProducts } = useProducts();
   const [loading, setLoading] = useState(true);
   const [orderNumber, setOrderNumber] = useState(params.get("order") ?? "");
   const [paid, setPaid] = useState(false);
@@ -28,11 +30,12 @@ export default function CheckoutSuccess() {
         if (o?.status === "paid") clearCart();
       }
       if (order) setOrderNumber(order);
+      await refreshProducts();
       setLoading(false);
     }
 
     verify();
-  }, [params, clearCart]);
+  }, [params, clearCart, refreshProducts]);
 
   if (loading) {
     return (

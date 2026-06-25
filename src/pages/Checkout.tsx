@@ -1,50 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, Truck, CreditCard, Check, ChevronLeft, Lock, Loader2, MapPin, AlertCircle } from "lucide-react";
+import { Truck, Check, ChevronLeft, Lock, Loader2, MapPin, AlertCircle, CreditCard } from "lucide-react";
 import { useCart, formatPrice } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useProducts } from "../context/ProductsContext";
 import { calculateShipping, STORE_ADDRESS } from "../lib/shipping";
-import { createOrder, validateCartStock } from "../lib/orders";
-import {
-  createCardPaymentIntent,
-  createStripeCheckout,
-  isStripeConfigured,
-  isPayPalConfigured,
-} from "../lib/payments";
+import { createOrder, validateCartStock, notifyOrderPlaced } from "../lib/orders";
+import { createCardPaymentIntent, isStripeConfigured } from "../lib/payments";
 import { validateEmail, validateName, validatePhone } from "../lib/validation";
-import { CreditCardLogo, PayPalLogo, StripeLogo, PaymentMethodsBar } from "../components/PaymentLogos";
+import { PaymentMethodsBar } from "../components/PaymentLogos";
 import CardPayment from "../components/CardPayment";
-import PayPalPayment from "../components/PayPalPayment";
-
-type PaymentId = "card" | "paypal" | "stripe";
-
-const PAYMENT_METHODS: { id: PaymentId; label: string; Logo: typeof CreditCardLogo; desc: string }[] = [
-  {
-    id: "card",
-    label: "Card (Visa · Mastercard · Amex)",
-    Logo: CreditCardLogo,
-    desc: "Pay securely with Visa, Mastercard or American Express via Stripe.",
-  },
-  {
-    id: "paypal",
-    label: "PayPal",
-    Logo: PayPalLogo,
-    desc: "Pay with your PayPal account — processed directly by PayPal.",
-  },
-  {
-    id: "stripe",
-    label: "Stripe Checkout",
-    Logo: StripeLogo,
-    desc: "Redirect to Stripe's secure checkout page (card, Apple Pay, Google Pay).",
-  },
-];
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items, subtotal, discount, shipping, shippingDistanceKm, setShippingCost, total, clearCart, setIsOpen, appliedPromo } = useCart();
+  const { items, subtotal, discount, shipping, shippingDistanceKm, setShippingCost, clearCart, setIsOpen, appliedPromo } = useCart();
   const { user } = useAuth();
+  const { refreshProducts } = useProducts();
   const [step, setStep] = useState(1);
-  const [payment, setPayment] = useState<PaymentId>("card");
   const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,7 +40,7 @@ export default function Checkout() {
   const orderTotal = subtotal - discount + activeShipping;
 
   useEffect(() => {
-    if (step !== 3 || payment !== "card" || !orderInfo) {
+    if (step !== 3 || !orderInfo) {
       setCardSecret(null);
       return;
     }
@@ -89,7 +61,7 @@ export default function Checkout() {
     });
 
     return () => { cancelled = true; };
-  }, [step, payment, orderInfo]);
+  }, [step, orderInfo]);
 
   if (items.length === 0) {
     return (
@@ -139,7 +111,7 @@ export default function Checkout() {
     shippingCost: finalShipping,
     shippingDistanceKm: quote?.distanceKm ?? shippingDistanceKm,
     total: finalTotal,
-    paymentMethod: payment,
+    paymentMethod: "stripe",
     shippingAddress: {
       address: form.address.trim(),
       city: form.city.trim(),
@@ -149,7 +121,8 @@ export default function Checkout() {
     userId: user?.id,
   });
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
+    await refreshProducts();
     clearCart();
     navigate(`/checkout/success?order=${orderInfo?.orderNumber ?? ""}`);
   };
@@ -192,38 +165,10 @@ export default function Checkout() {
       }
 
       setOrderInfo(order);
+      notifyOrderPlaced(order.orderId, "created");
       setStep(3);
-      return;
-    }
-
-    // Stripe Checkout redirect
-    if (payment === "stripe") {
-      if (!isStripeConfigured) {
-        setError("Stripe is not configured. Set VITE_STRIPE_PUBLISHABLE_KEY (pk_test_...) in your environment.");
-        return;
-      }
-      if (!orderInfo) {
-        setError("Order not found. Please go back and try again.");
-        return;
-      }
-
-      setLoading(true);
-      const checkout = await createStripeCheckout({
-        orderId: orderInfo.orderId,
-        orderNumber: orderInfo.orderNumber,
-      });
-      setLoading(false);
-
-      if ("error" in checkout) {
-        setError(checkout.error);
-        return;
-      }
-
-      window.location.href = checkout.url;
     }
   };
-
-  const selectedMethod = PAYMENT_METHODS.find(p => p.id === payment)!;
 
   return (
     <div className="fade-in">
@@ -244,19 +189,21 @@ export default function Checkout() {
       </section>
 
       <section className="container-page py-10 grid lg:grid-cols-[1fr_420px] gap-10">
-        <form onSubmit={handleContinue} className="space-y-6">
+        <div className="space-y-6">
           {error && (
             <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-600">
               <AlertCircle size={18} className="shrink-0 mt-0.5" /> {error}
             </div>
           )}
 
+          {step < 3 ? (
+          <form onSubmit={handleContinue} className="space-y-6">
           {step === 1 && (
             <div className="bg-white rounded-3xl p-6 md:p-8 card-shadow border border-cream">
               <h2 className="font-display text-2xl font-bold mb-2">Delivery address</h2>
               <p className="text-sm text-gray-500 mb-5 flex items-start gap-2">
                 <MapPin size={16} className="text-green shrink-0 mt-0.5" />
-                Shipping is calculated from our store: {STORE_ADDRESS} at $0.69/km
+                US orders: flat rate $5.99 standard · $9.99 express. International: distance-based (capped).
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2"><label className="block text-sm font-semibold mb-1">Email</label><input required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
@@ -274,9 +221,11 @@ export default function Checkout() {
             <div className="bg-white rounded-3xl p-6 md:p-8 card-shadow border border-cream">
               <h2 className="font-display text-2xl font-bold mb-5">Shipping method</h2>
               {calculatingShipping ? (
-                <div className="flex items-center gap-2 text-gray-500"><Loader2 size={18} className="animate-spin" /> Calculating distance...</div>
+                <div className="flex items-center gap-2 text-gray-500"><Loader2 size={18} className="animate-spin" /> Calculating...</div>
+              ) : quote && quote.distanceKm > 0 ? (
+                <p className="text-sm text-gray-600 mb-4">Distance from store ({STORE_ADDRESS}): <strong>{quote.distanceKm} km</strong></p>
               ) : quote ? (
-                <p className="text-sm text-gray-600 mb-4">Distance from store: <strong>{quote.distanceKm} km</strong></p>
+                <p className="text-sm text-gray-600 mb-4">Flat rate shipping within the United States.</p>
               ) : (
                 <button type="button" onClick={computeShipping} className="text-sm text-green font-semibold mb-4 hover:text-orange">Recalculate shipping</button>
               )}
@@ -303,91 +252,70 @@ export default function Checkout() {
             </div>
           )}
 
-          {step === 3 && (
-            <div className="bg-white rounded-3xl p-6 md:p-8 card-shadow border border-cream space-y-6">
-              <div>
-                <h2 className="font-display text-2xl font-bold mb-5">Payment method</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {PAYMENT_METHODS.map((p) => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      onClick={() => setPayment(p.id)}
-                      className={`flex flex-col items-center gap-3 rounded-2xl border p-5 text-sm font-semibold transition-colors ${payment === p.id ? "border-green bg-green-light/30 text-green ring-2 ring-green/20" : "border-cream text-gray-600 hover:border-green"}`}
-                    >
-                      <p.Logo className="h-8" />
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-cream/40 p-5 border border-cream">
-                <p className="text-sm text-gray-700 mb-4">{selectedMethod.desc}</p>
-
-                {payment === "card" && (
-                  <>
-                    {!isStripeConfigured && (
-                      <p className="text-red-600 text-sm">Configure VITE_STRIPE_PUBLISHABLE_KEY with a key starting with pk_test_ or pk_live_.</p>
-                    )}
-                    {loadingCard && (
-                      <div className="flex items-center gap-2 text-gray-500 py-4"><Loader2 size={18} className="animate-spin" /> Preparing secure card form...</div>
-                    )}
-                    {cardSecret && orderInfo && (
-                      <CardPayment
-                        clientSecret={cardSecret}
-                        orderId={orderInfo.orderId}
-                        orderNumber={orderInfo.orderNumber}
-                        total={orderTotal}
-                        onSuccess={handlePaymentSuccess}
-                        onError={setError}
-                      />
-                    )}
-                  </>
-                )}
-
-                {payment === "paypal" && (
-                  <>
-                    {!isPayPalConfigured && (
-                      <p className="text-red-600 text-sm">Configure VITE_PAYPAL_CLIENT_ID in your environment.</p>
-                    )}
-                    {orderInfo && isPayPalConfigured && (
-                      <PayPalPayment
-                        orderId={orderInfo.orderId}
-                        orderNumber={orderInfo.orderNumber}
-                        total={orderTotal}
-                        onSuccess={handlePaymentSuccess}
-                        onError={setError}
-                      />
-                    )}
-                  </>
-                )}
-
-                {payment === "stripe" && (
-                  <p className="text-sm text-gray-600">Click the button below to open Stripe Checkout in a new secure page.</p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> SSL encrypted · PCI compliant</div>
-            </div>
-          )}
-
           <div className="flex justify-between gap-3">
             {step > 1 && (
-              <button type="button" onClick={() => { setStep(step - 1); if (step === 3) setOrderInfo(null); }} className="btn-outline" disabled={loading}>
+              <button type="button" onClick={() => { setStep(step - 1); }} className="btn-outline" disabled={loading}>
                 Back
               </button>
             )}
-            {(step < 3 || payment === "stripe") && (
-              <div className="ml-auto">
-                <button type="submit" className="btn-primary flex items-center gap-2" disabled={loading || calculatingShipping}>
-                  {(loading || calculatingShipping) && <Loader2 size={18} className="animate-spin" />}
-                  {step < 3 ? "Continue" : `Pay ${formatPrice(orderTotal)} with Stripe`}
+            <div className="ml-auto">
+              <button type="submit" className="btn-primary flex items-center gap-2" disabled={loading || calculatingShipping}>
+                {(loading || calculatingShipping) && <Loader2 size={18} className="animate-spin" />}
+                Continue
+              </button>
+            </div>
+          </div>
+          </form>
+          ) : (
+            <>
+              <div className="bg-white rounded-3xl p-6 md:p-8 card-shadow border border-cream space-y-6">
+                <div className="flex items-center gap-3 border-b border-cream pb-4">
+                  <CreditCard className="text-green" size={22} />
+                  <h2 className="font-display text-2xl font-bold">Payment method</h2>
+                </div>
+
+                <p className="text-sm text-gray-600">
+                  Pay securely with card, Apple Pay, Google Pay or PayPal — all processed by Stripe.
+                </p>
+
+                {!isStripeConfigured && (
+                  <p className="text-red-600 text-sm">Configure VITE_STRIPE_PUBLISHABLE_KEY (pk_test_...) in your .env file.</p>
+                )}
+
+                {loadingCard && (
+                  <div className="flex items-center gap-2 text-gray-500 py-6"><Loader2 size={18} className="animate-spin" /> Preparing secure payment form...</div>
+                )}
+
+                {cardSecret && orderInfo && (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                    <CardPayment
+                      clientSecret={cardSecret}
+                      orderId={orderInfo.orderId}
+                      orderNumber={orderInfo.orderNumber}
+                      total={orderTotal}
+                      billingDetails={{
+                        name: `${form.firstName} ${form.lastName}`.trim(),
+                        email: form.email,
+                        phone: form.phone,
+                        address: { line1: form.address, city: form.city, country: form.country === "United States" ? "US" : form.country },
+                      }}
+                      onSuccess={handlePaymentSuccess}
+                      onError={setError}
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> SSL encrypted · PCI compliant · Powered by Stripe</div>
+              </div>
+
+              <div className="flex justify-between gap-3">
+                <button type="button" onClick={() => { setStep(2); setOrderInfo(null); setCardSecret(null); }} className="btn-outline">
+                  Back
                 </button>
               </div>
-            )}
-          </div>
-        </form>
+            </>
+          )}
+        </div>
 
         <aside className="bg-cream/40 rounded-3xl p-6 h-fit lg:sticky lg:top-32">
           <h3 className="font-display font-bold text-lg mb-4">Order summary</h3>

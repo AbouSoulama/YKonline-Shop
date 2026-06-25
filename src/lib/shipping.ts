@@ -5,6 +5,16 @@ interface Coords {
   lng: number;
 }
 
+const US_FLAT_STANDARD = 5.99;
+const US_FLAT_EXPRESS = 9.99;
+const MAX_DISTANCE_KM = 800;
+const MAX_SHIPPING_COST = 49;
+
+function isUnitedStates(country: string): boolean {
+  const c = country.trim().toLowerCase();
+  return c === "united states" || c === "usa" || c === "us" || c === "united states of america";
+}
+
 function haversineKm(a: Coords, b: Coords): number {
   const R = 6371;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
@@ -17,11 +27,12 @@ function haversineKm(a: Coords, b: Coords): number {
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-async function geocode(address: string): Promise<Coords | null> {
+async function geocode(address: string, country?: string): Promise<Coords | null> {
   try {
     const query = encodeURIComponent(address);
+    const countryCode = country && isUnitedStates(country) ? "&countrycodes=us" : "";
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1${countryCode}`,
       { headers: { "Accept-Language": "en", "User-Agent": "YKonlineShop/1.0 (contact@ykonline.shop)" } },
     );
     if (!res.ok) return null;
@@ -40,26 +51,26 @@ export interface ShippingQuote {
 }
 
 export async function calculateShipping(address: string, city: string, country: string): Promise<ShippingQuote> {
-  const fullAddress = `${address}, ${city}, ${country}`;
-  const destination = await geocode(fullAddress);
-
-  if (!destination) {
-    // Fallback: estimate from store using partial geocode
-    const cityCoords = await geocode(`${city}, ${country}`);
-    const dest = cityCoords ?? STORE_COORDS;
-    const distanceKm = Math.round(haversineKm(STORE_COORDS, dest) * 10) / 10;
-    const cost = Math.round(distanceKm * SHIPPING_RATE_PER_KM * 100) / 100;
-    return { distanceKm, cost: Math.max(cost, SHIPPING_RATE_PER_KM), expressCost: Math.round(cost * 1.5 * 100) / 100 };
+  if (isUnitedStates(country)) {
+    return { distanceKm: 0, cost: US_FLAT_STANDARD, expressCost: US_FLAT_EXPRESS };
   }
 
-  const distanceKm = Math.round(haversineKm(STORE_COORDS, destination) * 10) / 10;
-  const cost = Math.round(distanceKm * SHIPPING_RATE_PER_KM * 100) / 100;
+  const fullAddress = `${address}, ${city}, ${country}`;
+  const destination = await geocode(fullAddress, country)
+    ?? await geocode(`${city}, ${country}`, country);
 
-  return {
-    distanceKm,
-    cost: Math.max(cost, SHIPPING_RATE_PER_KM),
-    expressCost: Math.round(Math.max(cost, SHIPPING_RATE_PER_KM) * 1.5 * 100) / 100,
-  };
+  const dest = destination ?? STORE_COORDS;
+  let distanceKm = Math.round(haversineKm(STORE_COORDS, dest) * 10) / 10;
+
+  if (distanceKm > MAX_DISTANCE_KM) {
+    distanceKm = MAX_DISTANCE_KM;
+  }
+
+  const rawCost = Math.round(distanceKm * SHIPPING_RATE_PER_KM * 100) / 100;
+  const cost = Math.min(Math.max(rawCost, SHIPPING_RATE_PER_KM), MAX_SHIPPING_COST);
+  const expressCost = Math.min(Math.round(cost * 1.5 * 100) / 100, MAX_SHIPPING_COST + 10);
+
+  return { distanceKm, cost, expressCost };
 }
 
 export { STORE_ADDRESS };

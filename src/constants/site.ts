@@ -1,4 +1,5 @@
 export const SITE_EMAIL = "contact@ykonline.shop";
+export const ADMIN_WHATSAPP = "13012669830";
 
 export const SOCIAL_LINKS = {
   facebook: "https://facebook.com/ykonlineshop",

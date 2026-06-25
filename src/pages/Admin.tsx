@@ -4,7 +4,7 @@ import {
   BarChart3, Package, Users, ShoppingCart, Tag, FileText, Star, Settings, LogOut,
   Plus, Edit, Trash2, Search, Download, Eye, ChevronDown, TrendingUp,
   DollarSign, ShoppingBag, UserCheck, Check, AlertCircle,
-  ArrowUpRight, ArrowDownRight, Leaf
+  Leaf
 } from "lucide-react";
 import { SITE_EMAIL } from "../constants/site";
 import { useAuth, confirmLogout } from "../context/AuthContext";
@@ -20,7 +20,7 @@ import { slugify } from "../constants/site";
 
 // ── Types ──
 interface Product {
-  id: string; name: string; tagline: string; description: string; size: string; type: string; price: number; oldPrice: number; stock: number; status: "Active" | "Draft"; image: string; badge: string; ingredients: string; storage: string; usage: string[];
+  id: string; name: string; tagline: string; description: string; size: string; type: string; price: number; oldPrice: number; stock: number; status: "Active" | "Draft"; image: string; badge: string; ingredients: string; storage: string; usage: string[]; rating: number; reviews: number;
 }
 interface Order {
   dbId: string; id: string; customer: string; email: string; date: string; total: number; status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled"; items: number;
@@ -38,12 +38,12 @@ interface BlogPost {
 
 // ── Initial Data ──
 const initProducts: Product[] = [
-  { id: "P001", name: "Unrefined Organic Raw Shea Butter", tagline: "The ideal size to discover the benefits of natural shea.", description: "An organic raw shea butter, rich and versatile.", size: "100g", type: "Raw", price: 12.90, oldPrice: 14.90, stock: 120, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Best Seller", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"] },
-  { id: "P002", name: "Unrefined Organic Raw Shea Butter", tagline: "The essential natural care for the whole family.", description: "Generous size for regular use.", size: "250g", type: "Raw", price: 24.90, oldPrice: 28.90, stock: 80, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Most Popular", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"] },
-  { id: "P003", name: "Unrefined Organic Raw Shea Butter", tagline: "The large economical size for regular routines.", description: "Ideal for families, frequent use or natural care enthusiasts.", size: "500g", type: "Raw", price: 42.90, oldPrice: 49.90, stock: 45, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Best Value", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"] },
-  { id: "P004", name: "Organic Whipped Shea Butter", tagline: "All the richness of shea in a light and airy texture.", description: "Whipped texture that melts quickly on the skin.", size: "150ml", type: "Whipped", price: 19.90, oldPrice: 22.90, stock: 90, status: "Active", image: "/images/whipped-shea-jar.jpg", badge: "New", ingredients: "Butyrospermum Parkii Butter, whipped. 100% natural, organic.", storage: "Store in a cool, dry place away from direct sunlight.", usage: ["Skin", "Hair", "Baby/Family"] },
-  { id: "P005", name: "YKonline Shop Discovery Set", tagline: "The ideal set to discover or gift natural shea care.", description: "A selection of products to create a complete natural beauty routine.", size: "Set", type: "Set", price: 39.90, oldPrice: 49.90, stock: 30, status: "Active", image: "/images/shea-discovery-set.jpg", badge: "Gift Idea", ingredients: "Butyrospermum Parkii Butter. Multiple formats included.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"] },
-  { id: "P006", name: "Family Shea Butter Pack", tagline: "The generous pack for the whole family.", description: "A generous pack combining raw and whipped shea butter.", size: "Pack", type: "Set", price: 59.90, oldPrice: 72.90, stock: 25, status: "Active", image: "/images/shea-discovery-set.jpg", badge: "Family", ingredients: "Butyrospermum Parkii Butter. Raw and whipped formats.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"] },
+  { id: "P001", name: "Unrefined Organic Raw Shea Butter", tagline: "The ideal size to discover the benefits of natural shea.", description: "An organic raw shea butter, rich and versatile.", size: "100g", type: "Raw", price: 12.90, oldPrice: 14.90, stock: 120, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Best Seller", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"], rating: 4.9, reviews: 248 },
+  { id: "P002", name: "Unrefined Organic Raw Shea Butter", tagline: "The essential natural care for the whole family.", description: "Generous size for regular use.", size: "250g", type: "Raw", price: 24.90, oldPrice: 28.90, stock: 80, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Most Popular", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.95, reviews: 412 },
+  { id: "P003", name: "Unrefined Organic Raw Shea Butter", tagline: "The large economical size for regular routines.", description: "Ideal for families, frequent use or natural care enthusiasts.", size: "500g", type: "Raw", price: 42.90, oldPrice: 49.90, stock: 45, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Best Value", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.9, reviews: 189 },
+  { id: "P004", name: "Organic Whipped Shea Butter", tagline: "All the richness of shea in a light and airy texture.", description: "Whipped texture that melts quickly on the skin.", size: "150ml", type: "Whipped", price: 19.90, oldPrice: 22.90, stock: 90, status: "Active", image: "/images/whipped-shea-jar.jpg", badge: "New", ingredients: "Butyrospermum Parkii Butter, whipped. 100% natural, organic.", storage: "Store in a cool, dry place away from direct sunlight.", usage: ["Skin", "Hair", "Baby/Family"], rating: 4.85, reviews: 310 },
+  { id: "P005", name: "YKonline Shop Discovery Set", tagline: "The ideal set to discover or gift natural shea care.", description: "A selection of products to create a complete natural beauty routine.", size: "Set", type: "Set", price: 39.90, oldPrice: 49.90, stock: 30, status: "Active", image: "/images/shea-discovery-set.jpg", badge: "Gift Idea", ingredients: "Butyrospermum Parkii Butter. Multiple formats included.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"], rating: 5, reviews: 156 },
+  { id: "P006", name: "Family Shea Butter Pack", tagline: "The generous pack for the whole family.", description: "A generous pack combining raw and whipped shea butter.", size: "Pack", type: "Set", price: 59.90, oldPrice: 72.90, stock: 25, status: "Active", image: "/images/shea-discovery-set.jpg", badge: "Family", ingredients: "Butyrospermum Parkii Butter. Raw and whipped formats.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.95, reviews: 98 },
 ];
 
 const initOrders: Order[] = [
@@ -202,6 +202,7 @@ export default function Admin() {
         size: p.size, type: p.type, price: p.price, oldPrice: p.oldPrice ?? 0,
         stock: p.stock, status: "Active" as const, image: p.image, badge: p.badge ?? "",
         ingredients: p.ingredients, storage: p.storage, usage: p.usage,
+        rating: p.rating, reviews: p.reviews,
       })));
     }
   }, [storeProducts]);
@@ -237,8 +238,8 @@ export default function Admin() {
     usage: p.usage,
     image: p.image,
     gallery: [p.image],
-    rating: 4.9,
-    reviews: 0,
+  rating: p.rating ?? 0,
+    reviews: p.reviews ?? 0,
     stock: p.stock,
     badge: p.badge || undefined,
     ingredients: p.ingredients,
@@ -376,80 +377,90 @@ export default function Admin() {
   ];
 
   return (
-    <div className="flex min-h-[calc(100vh-116px)]">
+    <div className="flex min-h-[calc(100vh-116px)] bg-[#f4f7f5]">
       {/* Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col bg-[#052d13] text-white shrink-0">
+      <aside className="hidden lg:flex w-72 flex-col bg-gradient-to-b from-[#052d13] to-[#0a4a22] text-white shrink-0 shadow-xl">
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-orange flex items-center justify-center font-extrabold text-sm">YK</div>
+            <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-12 w-12 rounded-xl bg-white object-contain p-1 shadow-lg" />
             <div>
-              <p className="font-display font-bold text-sm">YKonline Shop</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider">Admin Panel</p>
+              <p className="font-display font-bold">YKonline Shop</p>
+              <p className="text-[11px] text-white/50 uppercase tracking-[0.2em]">Administration</p>
             </div>
           </div>
         </div>
-        <nav className="flex-1 py-4 space-y-1 px-3">
+        <nav className="flex-1 py-5 space-y-1 px-4 overflow-y-auto">
           {navItems.map(n => (
-            <button key={n.id} onClick={() => setTab(n.id)} className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${tab === n.id ? "bg-white/15 text-orange" : "text-white/70 hover:bg-white/5 hover:text-white"}`}>
-              <n.icon size={20} />
+            <button key={n.id} onClick={() => setTab(n.id)} className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all ${tab === n.id ? "bg-white text-[#052d13] shadow-md" : "text-white/75 hover:bg-white/10 hover:text-white"}`}>
+              <n.icon size={20} className={tab === n.id ? "text-orange" : ""} />
               <span className="flex-1 text-left">{n.label}</span>
-              {n.badge !== undefined && n.badge > 0 && <span className="bg-orange text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{n.badge}</span>}
+              {n.badge !== undefined && n.badge > 0 && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tab === n.id ? "bg-orange text-white" : "bg-white/20 text-white"}`}>{n.badge}</span>}
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-white/10">
-          <button onClick={async () => { if (confirmLogout()) { await logout(); navigate("/"); } }} className="w-full flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white/70 hover:text-red-400 hover:bg-white/5 transition-all">
-            <LogOut size={20} /> Sign out
+        <div className="p-4 border-t border-white/10 m-4 mt-0 rounded-2xl bg-white/5">
+          <div className="flex items-center gap-3 mb-3">
+            <img src="/images/ykonline-logo.png" alt="" className="h-10 w-10 rounded-xl bg-white object-contain p-0.5" />
+            <div className="min-w-0">
+              <p className="text-xs text-white/50">Signed in as</p>
+              <p className="text-sm font-semibold truncate">Administrator</p>
+            </div>
+          </div>
+          <button onClick={async () => { if (confirmLogout()) { await logout(); navigate("/"); } }} className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all">
+            <LogOut size={18} /> Sign out
           </button>
         </div>
       </aside>
 
       {/* Mobile nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex justify-around py-2 px-1">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex justify-around py-2 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
         {navItems.slice(0, 5).map(n => (
-          <button key={n.id} onClick={() => setTab(n.id)} className={`flex flex-col items-center gap-1 p-2 text-[10px] font-bold ${tab === n.id ? "text-green" : "text-gray-400"}`}>
+          <button key={n.id} onClick={() => setTab(n.id)} className={`flex flex-col items-center gap-1 p-2 text-[10px] font-bold rounded-xl ${tab === n.id ? "text-green bg-green/5" : "text-gray-400"}`}>
             <n.icon size={20} />
-            {n.label.slice(0, 6)}
+            {n.label.split(" ")[0]}
           </button>
         ))}
       </div>
 
       {/* Main */}
-      <main className="flex-1 bg-gray-50 overflow-y-auto pb-20 lg:pb-8">
-        {/* Top bar */}
-        <div className="sticky top-0 z-20 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h2 className="font-display text-xl font-bold text-gray-950 capitalize">{tab}</h2>
+      <main className="flex-1 overflow-y-auto pb-20 lg:pb-8">
+        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400">Dashboard</p>
+            <h2 className="font-display text-2xl font-bold text-gray-950 capitalize">{tab}</h2>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative hidden sm:block">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-10 pr-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-green w-64" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-green w-56" />
             </div>
-            <div className="h-9 w-9 rounded-full bg-green text-white flex items-center justify-center font-bold text-sm">A</div>
+            <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-10 w-10 rounded-full bg-white object-contain p-0.5 shadow-md" />
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 max-w-[1400px]">
           {/* ═══════ DASHBOARD ═══════ */}
           {tab === "dashboard" && (
             <div className="fade-in space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="rounded-3xl bg-gradient-to-r from-[#052d13] to-green p-8 text-white">
+                <p className="text-white/70 text-sm">Welcome back</p>
+                <h3 className="font-display text-2xl md:text-3xl font-bold mt-1">YKonline Shop overview</h3>
+                <p className="text-white/80 mt-2 text-sm max-w-xl">Manage products, orders, customers and content from one place.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
                 {[
-                  { label: "Total Revenue", value: fmt(totalRevenue), icon: DollarSign, change: "+12.5%", up: true, color: "bg-green" },
-                  { label: "Orders", value: totalOrders.toString(), icon: ShoppingBag, change: "+8.2%", up: true, color: "bg-orange" },
-                  { label: "Customers", value: totalCustomers.toString(), icon: UserCheck, change: "+15.3%", up: true, color: "bg-blue-600" },
-                  { label: "Avg. Order", value: fmt(avgOrder), icon: TrendingUp, change: "-2.1%", up: false, color: "bg-purple-600" },
+                  { label: "Total Revenue", value: fmt(totalRevenue), icon: DollarSign, color: "from-green to-[#0a4a22]" },
+                  { label: "Orders", value: totalOrders.toString(), icon: ShoppingBag, color: "from-orange to-orange-dark" },
+                  { label: "Customers", value: totalCustomers.toString(), icon: UserCheck, color: "from-blue-600 to-blue-800" },
+                  { label: "Avg. Order", value: fmt(avgOrder), icon: TrendingUp, color: "from-purple-600 to-purple-800" },
                 ].map(s => (
-                  <div key={s.label} className="rounded-2xl bg-white border border-gray-100 p-6">
+                  <div key={s.label} className="rounded-2xl bg-white border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-sm font-semibold text-gray-500">{s.label}</span>
-                      <div className={`h-10 w-10 rounded-xl ${s.color} text-white flex items-center justify-center`}><s.icon size={20} /></div>
+                      <div className={`h-11 w-11 rounded-xl bg-gradient-to-br ${s.color} text-white flex items-center justify-center shadow-sm`}><s.icon size={20} /></div>
                     </div>
                     <p className="font-display text-3xl font-extrabold text-gray-950">{s.value}</p>
-                    <div className={`flex items-center gap-1 mt-2 text-sm font-semibold ${s.up ? "text-green" : "text-red-500"}`}>
-                      {s.up ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />} {s.change} vs last month
-                    </div>
                   </div>
                 ))}
               </div>
@@ -774,7 +785,7 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
 
 function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (p: Product) => void; onClose: () => void }) {
   const allUsages = ["Skin", "Hair", "Baby/Family", "Massage"];
-  const defaultProduct: Product = { id: `P${String(Date.now()).slice(-4)}`, name: "", tagline: "", description: "", size: "", type: "Raw", price: 0, oldPrice: 0, stock: 0, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "", ingredients: "", storage: "Store in a dry place, away from heat and direct light.", usage: [] };
+  const defaultProduct: Product = { id: `P${String(Date.now()).slice(-4)}`, name: "", tagline: "", description: "", size: "", type: "Raw", price: 0, oldPrice: 0, stock: 0, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "", ingredients: "", storage: "Store in a dry place, away from heat and direct light.", usage: [], rating: 0, reviews: 0 };
   const [form, setForm] = useState<Product>(product || defaultProduct);
   const upd = (k: keyof Product, v: any) => setForm(f => ({ ...f, [k]: v }));
   const toggleUsage = (u: string) => {

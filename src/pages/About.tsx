@@ -1,11 +1,22 @@
 import { Leaf, Heart, Sparkles, Eye, Users, Award } from "lucide-react";
 import { Link } from "react-router-dom";
+import { products } from "../data/products";
 
 const values = [
   { icon: Leaf, title: "Naturalness", desc: "Simple products inspired by nature, with the fewest possible ingredients." },
   { icon: Award, title: "Quality", desc: "Rigorous selection of each batch to offer you a reliable, premium experience." },
   { icon: Eye, title: "Transparency", desc: "Every customer knows what they buy. Clear compositions, honest descriptions." },
   { icon: Users, title: "Closeness", desc: "An available customer service to advise you before, during and after your purchase." },
+];
+
+const totalReviews = products.reduce((sum, p) => sum + p.reviews, 0);
+const avgRating = (products.reduce((sum, p) => sum + p.rating * p.reviews, 0) / totalReviews).toFixed(1);
+const productCount = products.length;
+
+const stats = [
+  { k: String(productCount), l: "Premium products" },
+  { k: `${totalReviews.toLocaleString()}+`, l: "Customer reviews" },
+  { k: `${avgRating}★`, l: "Average rating" },
 ];
 
 export default function About() {
@@ -73,11 +84,7 @@ export default function About() {
       </section>
 
       <section className="container-page py-16 grid md:grid-cols-3 gap-6">
-        {[
-          { k: "5+", l: "Years of passion" },
-          { k: "1,200+", l: "Happy customers" },
-          { k: "100%", l: "Natural & organic" },
-        ].map((s) => (
+        {stats.map((s) => (
           <div key={s.l} className="bg-green text-white rounded-3xl p-10 text-center">
             <p className="font-display text-5xl font-bold text-orange mb-2">{s.k}</p>
             <p className="text-white/90">{s.l}</p>

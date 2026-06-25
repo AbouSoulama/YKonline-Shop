@@ -168,6 +168,11 @@ export async function markOrderPaid(orderId: string, stripeSessionId?: string, p
   });
 }
 
+export async function notifyOrderPlaced(orderId: string, type: "created" | "paid" = "created"): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  await supabase.functions.invoke("notify-order", { body: { orderId, type } });
+}
+
 export async function validateCartStock(items: CartItem[]): Promise<string | null> {
   if (!isSupabaseConfigured) return null;
 

@@ -64,6 +64,8 @@ function rowFromProduct(p: Product) {
     usage: p.usage,
     image: p.image,
     gallery: p.gallery?.length ? p.gallery : [p.image],
+    rating: p.rating,
+    reviews_count: p.reviews,
     stock: p.stock,
     badge: p.badge ?? null,
     ingredients: p.ingredients,

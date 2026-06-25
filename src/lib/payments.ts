@@ -26,16 +26,30 @@ function extractFunctionError(data: unknown, error: { message: string } | null):
 }
 
 export async function createCardPaymentIntent(orderId: string): Promise<{ clientSecret: string } | { error: string }> {
-  if (!isSupabaseConfigured) return { error: "Payment system not configured." };
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase.functions.invoke("create-payment-intent", {
+      body: { orderId },
+    });
 
-  const { data, error } = await supabase.functions.invoke("create-payment-intent", {
-    body: { orderId },
-  });
+    const fnError = extractFunctionError(data, error);
+    if (!fnError && data?.clientSecret) {
+      return { clientSecret: data.clientSecret };
+    }
+  }
 
-  const fnError = extractFunctionError(data, error);
-  if (fnError) return { error: fnError };
-  if (!data?.clientSecret) return { error: "Could not initialize card payment." };
-  return { clientSecret: data.clientSecret };
+  try {
+    const res = await fetch("/api/create-payment-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error || "Could not initialize payment." };
+    if (!data.clientSecret) return { error: "Could not initialize payment." };
+    return { clientSecret: data.clientSecret };
+  } catch {
+    return { error: "Payment server is unavailable. Add STRIPE_SECRET_KEY to .env for local testing." };
+  }
 }
 
 export async function createStripeCheckout(params: {

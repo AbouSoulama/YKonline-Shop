@@ -29,11 +29,11 @@ export function CreditCardLogo({ className = "h-6" }: { className?: string }) {
 }
 
 export function PayPalLogo({ className = "h-6" }: { className?: string }) {
-  return <PaymentImg src="/payments/paypal.png" alt="PayPal" className={className} darkBg />;
+  return <PaymentImg src="/payments/paypal.png" alt="PayPal" className={className} />;
 }
 
 export function StripeLogo({ className = "h-6" }: { className?: string }) {
-  return <PaymentImg src="/payments/stripe.png" alt="Stripe" className={className} darkBg />;
+  return <PaymentImg src="/payments/stripe.png" alt="Stripe" className={className} />;
 }
 
 export function PaymentMethodsBar({ className = "" }: { className?: string }) {
