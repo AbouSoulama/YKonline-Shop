@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { Calendar, Clock, User, ArrowLeft, ArrowRight, Tag, BookOpen } from "lucide-react";
 import { fetchPostBySlug, fetchPublishedPosts, incrementPostViews, type BlogPost } from "../lib/blog";
 import SubscribeForm from "../components/SubscribeForm";
+import { usePageMeta } from "../lib/seo";
+import { notifyPrerenderReady } from "../components/PrerenderNotifier";
 
 export default function BlogPostPage() {
   const { slug } = useParams();
@@ -15,10 +17,19 @@ export default function BlogPostPage() {
     fetchPostBySlug(slug).then((p) => {
       setPost(p);
       setLoading(false);
-      if (p) incrementPostViews(p.id);
+      if (p) {
+        incrementPostViews(p.id);
+        window.setTimeout(notifyPrerenderReady, 300);
+      }
     });
     fetchPublishedPosts().then((posts) => setRelated(posts.filter((p) => p.slug !== slug).slice(0, 3)));
   }, [slug]);
+
+  usePageMeta({
+    title: post?.title ?? "Blog",
+    description: post?.excerpt ?? "Natural beauty tips and shea butter guides from YKonline Shop.",
+    path: post ? `/blog/${post.slug}` : undefined,
+  });
 
   if (loading) {
     return (

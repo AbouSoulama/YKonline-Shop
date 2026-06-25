@@ -8,6 +8,7 @@ import { useCart, formatPrice } from "../context/CartContext";
 import { toggleWishlist, isInWishlist } from "../lib/account";
 import { discountPercent, stockLabel } from "../lib/productDisplay";
 import ProductCard from "../components/ProductCard";
+import { usePageMeta } from "../lib/seo";
 
 export default function Product() {
   const { id } = useParams();
@@ -26,6 +27,13 @@ export default function Product() {
   useEffect(() => {
     if (user?.id && id) isInWishlist(user.id, id).then(setInWishlist);
   }, [user?.id, id]);
+
+  usePageMeta({
+    title: product?.name ?? "Product",
+    description: product?.description ?? "Premium organic shea butter from YKonline Shop.",
+    path: product ? `/product/${product.id}` : undefined,
+    image: product?.image ? `${import.meta.env.VITE_SITE_URL || "https://ykonline.shop"}${product.image}` : undefined,
+  });
 
   if (!product) {
     return (
