@@ -136,6 +136,47 @@ export async function updateOrderStatus(id: string, status: string): Promise<voi
   await supabase.from("orders").update({ status }).eq("id", id);
 }
 
+function mapRowToOrder(row: Record<string, unknown>): Order {
+  return {
+    id: row.id as string,
+    orderNumber: (row.order_number ?? row.orderNumber) as string,
+    customerEmail: (row.customer_email ?? row.customerEmail ?? "") as string,
+    customerName: (row.customer_name ?? row.customerName ?? "") as string,
+    total: Number(row.total),
+    shippingCost: Number(row.shipping_cost ?? row.shippingCost ?? 0),
+    status: (row.status ?? "pending") as string,
+    paymentMethod: (row.payment_method ?? row.paymentMethod ?? "") as string,
+    items: row.items as CartItem[],
+    createdAt: new Date(row.created_at as string).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+  };
+}
+
+export async function trackOrderByEmail(orderNumber: string, email: string): Promise<Order | null> {
+  if (!isSupabaseConfigured) return null;
+
+  const normalizedNumber = orderNumber.trim();
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc("track_order", {
+    p_order_number: normalizedNumber,
+    p_email: normalizedEmail,
+  });
+
+  if (!rpcError && rpcData) {
+    return mapRowToOrder(rpcData as Record<string, unknown>);
+  }
+
+  const { data: fnData, error: fnError } = await supabase.functions.invoke("track-order", {
+    body: { orderNumber: normalizedNumber, email: normalizedEmail },
+  });
+
+  if (!fnError && fnData?.order) {
+    return mapRowToOrder(fnData.order as Record<string, unknown>);
+  }
+
+  return null;
+}
+
 export async function fetchOrderByNumber(orderNumber: string): Promise<Order | null> {
   if (!isSupabaseConfigured) return null;
 
@@ -147,18 +188,7 @@ export async function fetchOrderByNumber(orderNumber: string): Promise<Order | n
 
   if (error || !data) return null;
 
-  return {
-    id: data.id,
-    orderNumber: data.order_number,
-    customerEmail: data.customer_email ?? "",
-    customerName: data.customer_name ?? "",
-    total: Number(data.total),
-    shippingCost: Number(data.shipping_cost ?? 0),
-    status: data.status ?? "pending",
-    paymentMethod: data.payment_method ?? "",
-    items: data.items as CartItem[],
-    createdAt: new Date(data.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-  };
+  return mapRowToOrder(data);
 }
 
 export async function markOrderPaid(orderId: string, stripeSessionId?: string, paymentMethod?: string): Promise<void> {

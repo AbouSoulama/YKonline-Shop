@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /checkout
+Disallow: /account
+Disallow: /auth/
+
+Sitemap: https://ykonline.shop/sitemap.xml

@@ -38,6 +38,7 @@ export default function Footer() {
             <li><Link to="/faq" className="hover:text-orange">FAQ</Link></li>
             <li><Link to="/contact" className="hover:text-orange">Contact us</Link></li>
             <li><Link to="/shipping" className="hover:text-orange">Shipping & Returns</Link></li>
+            <li><Link to="/track-order" className="hover:text-orange">Track my order</Link></li>
             <li><Link to="/account" className="hover:text-orange">My account</Link></li>
             <li><a href="https://wa.me/13012669830" className="hover:text-orange">WhatsApp chat</a></li>
           </ul>

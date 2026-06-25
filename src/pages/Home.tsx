@@ -5,6 +5,7 @@ import ProductCard from "../components/ProductCard";
 import SubscribeForm from "../components/SubscribeForm";
 import { useProducts } from "../context/ProductsContext";
 import { useReviews } from "../context/ReviewContext";
+import { usePageMeta } from "../lib/seo";
 
 const benefits = [
   { icon: Leaf, title: "100% Natural", desc: "A simple, rich and authentic care product for a healthier beauty routine." },
@@ -32,6 +33,12 @@ const commitments = [
 ];
 
 export default function Home() {
+  usePageMeta({
+    title: "YKonline Shop - Natural Organic Premium Shea Butter",
+    description: "Premium organic shea butter to naturally nourish your skin and hair. 100% natural, fast shipping worldwide.",
+    path: "/",
+  });
+
   const { products } = useProducts();
   const featured = products.slice(0, 4);
   const { getHomepageReviews } = useReviews();

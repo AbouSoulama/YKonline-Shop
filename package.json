@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "supabase:deploy": "supabase functions deploy create-order create-payment-intent mark-order-paid notify-order create-checkout capture-paypal-order stripe-webhook verify-checkout"
+    "supabase:deploy": "supabase functions deploy create-order create-payment-intent mark-order-paid notify-order create-checkout capture-paypal-order stripe-webhook verify-checkout track-order"
   },
   "dependencies": {
     "@paypal/react-paypal-js": "^10.0.0",

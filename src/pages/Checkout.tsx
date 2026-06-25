@@ -124,7 +124,8 @@ export default function Checkout() {
   const handlePaymentSuccess = async () => {
     await refreshProducts();
     clearCart();
-    navigate(`/checkout/success?order=${orderInfo?.orderNumber ?? ""}`);
+    const email = encodeURIComponent(form.email.trim().toLowerCase());
+    navigate(`/checkout/success?order=${orderInfo?.orderNumber ?? ""}&email=${email}`);
   };
 
   const handleContinue = async (e: React.FormEvent) => {

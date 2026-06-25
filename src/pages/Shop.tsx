@@ -3,6 +3,7 @@ import { Search, SlidersHorizontal, Grid, List } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { useProducts } from "../context/ProductsContext";
+import { usePageMeta } from "../lib/seo";
 
 const sizes = ["All", "100g", "250g", "500g", "150ml", "Set", "Pack"];
 const types: ("All" | "Raw" | "Whipped" | "Set")[] = ["All", "Raw", "Whipped", "Set"];
@@ -16,6 +17,12 @@ const sorts = [
 ];
 
 export default function Shop() {
+  usePageMeta({
+    title: "Shop Organic Shea Butter",
+    description: "Browse our collection of premium organic raw, whipped shea butter and discovery sets. Natural skin and hair care.",
+    path: "/shop",
+  });
+
   const { products } = useProducts();
   const [searchParams] = useSearchParams();
   const [size, setSize] = useState("All");

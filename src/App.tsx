@@ -20,6 +20,7 @@ import Contact from "./pages/Contact";
 import Account from "./pages/Account";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
+import TrackOrder from "./pages/TrackOrder";
 import AuthCallback from "./pages/AuthCallback";
 import Legal from "./pages/Legal";
 import Admin from "./pages/Admin";
@@ -58,6 +59,7 @@ function StorefrontLayout() {
           <Route path="/account" element={<Account />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/legal" element={<Legal page="legal" />} />
           <Route path="/terms" element={<Legal page="terms" />} />
           <Route path="/privacy" element={<Legal page="privacy" />} />

@@ -47,7 +47,7 @@ function CardForm({ orderId, orderNumber, total, billingDetails, onSuccess, onEr
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/success?order=${orderNumber}`,
+        return_url: `${window.location.origin}/checkout/success?order=${orderNumber}&email=${encodeURIComponent(billingDetails.email)}`,
         payment_method_data: {
           billing_details: {
             name: billingDetails.name,

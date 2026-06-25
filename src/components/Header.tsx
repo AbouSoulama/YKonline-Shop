@@ -77,7 +77,7 @@ export default function Header() {
           >
             <Search size={22} />
           </button>
-          <Link to="/account" className="text-green hover:text-orange transition-colors hidden sm:block" aria-label="Account">
+          <Link to="/account" className="text-green hover:text-orange transition-colors" aria-label="Account">
             <User size={22} />
           </Link>
           <a
@@ -146,6 +146,12 @@ export default function Header() {
                 {n.label}
               </NavLink>
             ))}
+            <NavLink to="/track-order" onClick={() => setOpen(false)} className={({ isActive }) => `py-2 flex items-center gap-2 ${isActive ? "text-green" : ""}`}>
+              Track my order
+            </NavLink>
+            <NavLink to="/account" onClick={() => setOpen(false)} className={({ isActive }) => `py-2 flex items-center gap-2 ${isActive ? "text-green" : ""}`}>
+              <User size={18} /> My account
+            </NavLink>
           </nav>
         </div>
       )}
