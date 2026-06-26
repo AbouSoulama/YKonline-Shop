@@ -5,7 +5,7 @@ import { useCart, formatPrice } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useProducts } from "../context/ProductsContext";
 import { calculateShipping, STORE_ADDRESS } from "../lib/shipping";
-import { createOrder, validateCartStock, notifyOrderPlaced } from "../lib/orders";
+import { createOrder, validateCartStock, notifyOrderPlaced, markOrderPaid } from "../lib/orders";
 import { createCardPaymentIntent, isStripeConfigured } from "../lib/payments";
 import { validateEmail, validateName, validatePhone } from "../lib/validation";
 import { PaymentMethodsBar } from "../components/PaymentLogos";
@@ -122,6 +122,12 @@ export default function Checkout() {
   });
 
   const handlePaymentSuccess = async () => {
+    if (orderInfo?.orderId) {
+      const paid = await markOrderPaid(orderInfo.orderId, undefined, "stripe");
+      if (!paid.success) {
+        await notifyOrderPlaced(orderInfo.orderId, "paid");
+      }
+    }
     await refreshProducts();
     clearCart();
     const email = encodeURIComponent(form.email.trim().toLowerCase());
@@ -166,7 +172,7 @@ export default function Checkout() {
       }
 
       setOrderInfo(order);
-      notifyOrderPlaced(order.orderId, "created");
+      void notifyOrderPlaced(order.orderId, "created");
       setStep(3);
     }
   };
@@ -177,7 +183,7 @@ export default function Checkout() {
         <div className="container-page">
           <Link to="/shop" onClick={() => setIsOpen(false)} className="text-sm text-gray-600 hover:text-green flex items-center gap-1 inline-flex"><ChevronLeft size={16} /> Continue shopping</Link>
           <h1 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mt-3">Checkout</h1>
-          <div className="flex items-center gap-2 mt-4 text-sm">
+          <div className="flex items-center gap-2 mt-4 text-sm flex-wrap">
             {["Delivery", "Shipping", "Payment"].map((l, i) => (
               <div key={l} className="flex items-center gap-2">
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step > i + 1 ? "bg-green text-white" : step === i + 1 ? "bg-orange text-white" : "bg-cream text-gray-500"}`}>{step > i + 1 ? <Check size={14} /> : i + 1}</span>

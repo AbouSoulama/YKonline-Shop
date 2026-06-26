@@ -96,7 +96,7 @@ export default function Shop() {
         <div className="absolute inset-0 bg-gradient-to-r from-green via-green/90 to-green/40" />
         <div className="container-page relative">
           <p className="text-sm text-orange font-bold uppercase tracking-[0.22em]">Shop</p>
-          <h1 className="font-display text-5xl md:text-7xl font-extrabold leading-tight tracking-[-0.05em] mt-2">Our Organic Shea Butters</h1>
+          <h1 className="font-display text-4xl sm:text-5xl md:text-7xl font-extrabold leading-tight tracking-[-0.05em] mt-2 break-words">Our Organic Shea Butters</h1>
           <p className="text-white/82 mt-4 max-w-2xl text-lg">Explore our selection of premium organic shea butters. Pure, rich and authentic, chosen to take care of your skin and hair naturally.</p>
         </div>
       </section>

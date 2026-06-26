@@ -61,7 +61,7 @@ export default function Home() {
             <p className="reveal-up mb-4 font-display text-lg md:text-2xl font-semibold text-orange">
               Natural care that nourishes your beauty.
             </p>
-            <h1 className="reveal-up delay-100 font-display text-5xl md:text-7xl lg:text-8xl font-extrabold leading-[0.92] tracking-[-0.05em]">
+            <h1 className="reveal-up delay-100 font-display text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-extrabold leading-[0.92] tracking-[-0.05em] break-words">
               YKonline Shop
             </h1>
             <p className="reveal-up delay-200 mt-7 max-w-2xl text-base md:text-xl leading-relaxed text-white/90">

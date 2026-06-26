@@ -30,9 +30,11 @@ export default function Header() {
             <span className="flex items-center gap-2"><ShieldCheck size={15} /> Secure Payment</span>
             <span className="flex items-center gap-2"><Leaf size={15} /> Premium Organic Shea Butter</span>
           </div>
-          <div className="md:hidden whitespace-nowrap marquee-track flex gap-8 text-white/90 font-semibold">
+          <div className="md:hidden flex-1 min-w-0 overflow-hidden">
+            <div className="whitespace-nowrap marquee-track flex gap-8 text-white/90 font-semibold">
             <span>Fast Shipping</span><span>Secure Payment</span><span>Premium Organic Shea Butter</span><span>WELCOME10</span>
             <span>Fast Shipping</span><span>Secure Payment</span><span>Premium Organic Shea Butter</span><span>WELCOME10</span>
+            </div>
           </div>
           <div className="hidden md:flex items-center gap-2 font-bold text-green bg-white rounded-full px-4 py-1 shadow-sm">
             <BadgePercent size={15} className="text-orange" /> -10% with code <span className="text-orange">WELCOME10</span>

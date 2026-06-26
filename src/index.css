@@ -15,11 +15,14 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   font-family: var(--font-body);
   color: #1f2937;
+  overflow-x: hidden;
+  max-width: 100%;
   background:
     radial-gradient(circle at top left, rgba(255, 121, 0, 0.08), transparent 28rem),
     radial-gradient(circle at top right, rgba(11, 102, 35, 0.08), transparent 30rem),
@@ -38,6 +41,12 @@ h1, h2, h3, h4, h5, h6 {
   margin-right: auto;
   padding-left: 1rem;
   padding-right: 1rem;
+  width: 100%;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 @media (min-width: 768px) {

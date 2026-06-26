@@ -191,16 +191,47 @@ export async function fetchOrderByNumber(orderNumber: string): Promise<Order | n
   return mapRowToOrder(data);
 }
 
-export async function markOrderPaid(orderId: string, stripeSessionId?: string, paymentMethod?: string): Promise<void> {
-  if (!isSupabaseConfigured) return;
-  await supabase.functions.invoke("mark-order-paid", {
+export async function markOrderPaid(orderId: string, stripeSessionId?: string, paymentMethod?: string): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: false, error: "Database not configured." };
+
+  const { data, error } = await supabase.functions.invoke("mark-order-paid", {
     body: { orderId, stripeSessionId, paymentMethod },
   });
+
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error as string };
+  return { success: true };
 }
 
-export async function notifyOrderPlaced(orderId: string, type: "created" | "paid" = "created"): Promise<void> {
-  if (!isSupabaseConfigured) return;
-  await supabase.functions.invoke("notify-order", { body: { orderId, type } });
+async function invokeNotifyOrderApi(orderId: string, type: "created" | "paid"): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch("/api/notify-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, type }),
+    });
+    const payload = await res.json();
+    if (!res.ok || !payload.success) {
+      return { success: false, error: payload.error || payload.errors?.join("; ") || "Email API failed." };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Email API failed." };
+  }
+}
+
+export async function notifyOrderPlaced(orderId: string, type: "created" | "paid" = "created"): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: false, error: "Database not configured." };
+
+  const { data, error } = await supabase.functions.invoke("notify-order", { body: { orderId, type } });
+
+  if (!error && data?.success) return { success: true };
+
+  const edgeError = error?.message || (data?.error as string) || (data?.errors as string[])?.join("; ");
+  const fallback = await invokeNotifyOrderApi(orderId, type);
+  if (fallback.success) return { success: true };
+
+  return { success: false, error: edgeError || fallback.error || "Unable to send order emails." };
 }
 
 export async function validateCartStock(items: CartItem[]): Promise<string | null> {

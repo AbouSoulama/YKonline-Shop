@@ -4,7 +4,7 @@ import {
   BarChart3, Package, Users, ShoppingCart, Tag, FileText, Star, Settings, LogOut,
   Plus, Edit, Trash2, Search, Download, Eye, ChevronDown, TrendingUp,
   DollarSign, ShoppingBag, UserCheck, Check, AlertCircle,
-  Leaf
+  Leaf, Menu, X
 } from "lucide-react";
 import { SITE_EMAIL } from "../constants/site";
 import { useAuth, confirmLogout } from "../context/AuthContext";
@@ -117,6 +117,7 @@ export default function Admin() {
   const [pwd, setPwd] = useState("");
   const [loginErr, setLoginErr] = useState("");
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   // Data states
@@ -376,69 +377,101 @@ export default function Admin() {
     { id: "settings", icon: Settings, label: "Settings" },
   ];
 
-  return (
-    <div className="flex min-h-[calc(100vh-116px)] bg-[#f4f7f5]">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex w-72 flex-col bg-gradient-to-b from-[#052d13] to-[#0a4a22] text-white shrink-0 shadow-xl">
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-12 w-12 rounded-xl bg-white object-contain p-1 shadow-lg" />
-            <div>
-              <p className="font-display font-bold">YKonline Shop</p>
-              <p className="text-[11px] text-white/50 uppercase tracking-[0.2em]">Administration</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 py-5 space-y-1 px-4 overflow-y-auto">
-          {navItems.map(n => (
-            <button key={n.id} onClick={() => setTab(n.id)} className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all ${tab === n.id ? "bg-white text-[#052d13] shadow-md" : "text-white/75 hover:bg-white/10 hover:text-white"}`}>
-              <n.icon size={20} className={tab === n.id ? "text-orange" : ""} />
-              <span className="flex-1 text-left">{n.label}</span>
-              {n.badge !== undefined && n.badge > 0 && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tab === n.id ? "bg-orange text-white" : "bg-white/20 text-white"}`}>{n.badge}</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="p-4 border-t border-white/10 m-4 mt-0 rounded-2xl bg-white/5">
-          <div className="flex items-center gap-3 mb-3">
-            <img src="/images/ykonline-logo.png" alt="" className="h-10 w-10 rounded-xl bg-white object-contain p-0.5" />
-            <div className="min-w-0">
-              <p className="text-xs text-white/50">Signed in as</p>
-              <p className="text-sm font-semibold truncate">Administrator</p>
-            </div>
-          </div>
-          <button onClick={async () => { if (confirmLogout()) { await logout(); navigate("/"); } }} className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all">
-            <LogOut size={18} /> Sign out
-          </button>
-        </div>
-      </aside>
+  const selectTab = (id: Tab) => {
+    setTab(id);
+    setMobileNavOpen(false);
+  };
 
-      {/* Mobile nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex justify-around py-2 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        {navItems.slice(0, 5).map(n => (
-          <button key={n.id} onClick={() => setTab(n.id)} className={`flex flex-col items-center gap-1 p-2 text-[10px] font-bold rounded-xl ${tab === n.id ? "text-green bg-green/5" : "text-gray-400"}`}>
-            <n.icon size={20} />
-            {n.label.split(" ")[0]}
+  const handleSignOut = async () => {
+    if (confirmLogout()) {
+      await logout();
+      navigate("/");
+    }
+  };
+
+  const sidebarNav = (
+    <>
+      <div className="p-6 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-12 w-12 rounded-xl bg-white object-contain p-1 shadow-lg" />
+          <div>
+            <p className="font-display font-bold">YKonline Shop</p>
+            <p className="text-[11px] text-white/50 uppercase tracking-[0.2em]">Administration</p>
+          </div>
+        </div>
+      </div>
+      <nav className="flex-1 py-5 space-y-1 px-4 overflow-y-auto">
+        {navItems.map(n => (
+          <button key={n.id} onClick={() => selectTab(n.id)} className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all ${tab === n.id ? "bg-white text-[#052d13] shadow-md" : "text-white/75 hover:bg-white/10 hover:text-white"}`}>
+            <n.icon size={20} className={tab === n.id ? "text-orange" : ""} />
+            <span className="flex-1 text-left">{n.label}</span>
+            {n.badge !== undefined && n.badge > 0 && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tab === n.id ? "bg-orange text-white" : "bg-white/20 text-white"}`}>{n.badge}</span>}
           </button>
         ))}
+      </nav>
+      <div className="p-4 border-t border-white/10 m-4 mt-0 rounded-2xl bg-white/5">
+        <div className="flex items-center gap-3 mb-3">
+          <img src="/images/ykonline-logo.png" alt="" className="h-10 w-10 rounded-xl bg-white object-contain p-0.5" />
+          <div className="min-w-0">
+            <p className="text-xs text-white/50">Signed in as</p>
+            <p className="text-sm font-semibold truncate">Administrator</p>
+          </div>
+        </div>
+        <button onClick={handleSignOut} className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all">
+          <LogOut size={18} /> Sign out
+        </button>
       </div>
+    </>
+  );
+
+  return (
+    <div className="flex min-h-screen bg-[#f4f7f5] overflow-x-hidden">
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-72 flex-col bg-gradient-to-b from-[#052d13] to-[#0a4a22] text-white shrink-0 shadow-xl">
+        {sidebarNav}
+      </aside>
+
+      {/* Mobile sidebar drawer */}
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <button type="button" className="absolute inset-0 bg-black/50" onClick={() => setMobileNavOpen(false)} aria-label="Close menu" />
+          <aside className="absolute left-0 top-0 bottom-0 w-[min(100vw-3rem,18rem)] flex flex-col bg-gradient-to-b from-[#052d13] to-[#0a4a22] text-white shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <p className="font-display font-bold">Menu</p>
+              <button type="button" onClick={() => setMobileNavOpen(false)} className="p-2 rounded-lg hover:bg-white/10" aria-label="Close">
+                <X size={22} />
+              </button>
+            </div>
+            {sidebarNav}
+          </aside>
+        </div>
+      )}
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto pb-20 lg:pb-8">
-        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-5 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400">Dashboard</p>
-            <h2 className="font-display text-2xl font-bold text-gray-950 capitalize">{tab}</h2>
+      <main className="flex-1 min-w-0 overflow-x-hidden">
+        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button type="button" onClick={() => setMobileNavOpen(true)} className="lg:hidden p-2 rounded-xl border border-gray-200 text-gray-700 shrink-0" aria-label="Open menu">
+              <Menu size={22} />
+            </button>
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400">Dashboard</p>
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-gray-950 capitalize truncate">{tab}</h2>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative hidden sm:block">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="relative hidden md:block">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-green w-56" />
             </div>
-            <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-10 w-10 rounded-full bg-white object-contain p-0.5 shadow-md" />
+            <button type="button" onClick={handleSignOut} className="lg:hidden flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 hover:border-red-200 hover:text-red-600">
+              <LogOut size={16} /> <span className="hidden xs:inline">Out</span>
+            </button>
+            <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white object-contain p-0.5 shadow-md" />
           </div>
         </div>
 
-        <div className="p-6 max-w-[1400px]">
+        <div className="p-4 sm:p-6 max-w-[1400px] overflow-x-hidden">
           {/* ═══════ DASHBOARD ═══════ */}
           {tab === "dashboard" && (
             <div className="fade-in space-y-6">
@@ -563,7 +596,7 @@ export default function Admin() {
             <div className="fade-in space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-gray-500">{orders.length} orders</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {(["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"] as const).map(s => (
                     <button key={s} className="text-xs font-bold px-3 py-1.5 rounded-full border border-gray-200 hover:border-green hover:text-green transition-colors">{s}</button>
                   ))}

@@ -3,7 +3,6 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Loader2 } from "lucide-react";
 import { getStripePublishableKey } from "../lib/payments";
-import { markOrderPaid } from "../lib/orders";
 import { formatPrice } from "../context/CartContext";
 
 interface BillingDetails {
@@ -67,7 +66,6 @@ function CardForm({ orderId, orderNumber, total, billingDetails, onSuccess, onEr
     }
 
     if (paymentIntent?.status === "succeeded") {
-      await markOrderPaid(orderId, undefined, "stripe");
       onSuccess();
     }
     setLoading(false);
