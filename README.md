@@ -133,4 +133,3 @@ public/         # Images, robots.txt
 ## Licence
 
 Projet privé — YKonline Shop © 2026
-YK
