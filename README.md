@@ -74,15 +74,29 @@ supabase secrets set ADMIN_EMAIL=contact@ykonline.shop
 
 ## Déploiement Vercel
 
-1. Connectez le dépôt GitHub `AbouSoulama/YKonline-Shop`
-2. Framework : **Vite**
-3. Build Command : laisser vide (défini dans `vercel.json`) ou `npm run build`
-4. Output Directory : `dist`
-5. **Important :** déployez toujours le dernier commit de `main`, pas un ancien déploiement
+### Si le build échoue avec Playwright
 
-Si le build échoue avec Playwright, vérifiez que :
-- Le commit déployé contient le fix (`package.json` → `"build": "vite build && tsx scripts/generate-sitemap.ts"`)
-- Dans Vercel → Settings → General → **Build Command** n'est pas surchargé manuellement avec Playwright
+**Ne cliquez pas sur « Redeploy »** sur un ancien déploiement en erreur — cela relance le **même vieux commit** (`fe0dbf2`) qui contient Playwright.
+
+À la place :
+
+1. Allez dans **Deployments** (liste des déploiements)
+2. Vérifiez que le **dernier** déploiement utilise le commit récent (`bba407a` ou plus récent)
+3. Si aucun déploiement récent n’existe : **Deployments → en haut à droite → Deploy** → branche `main` → **Deploy**
+4. Dans **Settings → General → Build & Development Settings** :
+   - **Build Command** : laissez vide OU `npm run build`
+   - **Output Directory** : `dist`
+   - **Install Command** : `npm install`
+
+Le build correct affiche :
+```
+> vite build && tsx scripts/generate-sitemap.ts
+Sitemap generated (25 URLs).
+```
+
+**Pas** `npx playwright install chromium`.
+
+### Configuration standard
 
 ## Configuration Supabase
 

@@ -1,6 +1,8 @@
 {
   "buildCommand": "vite build && tsx scripts/generate-sitemap.ts",
   "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
