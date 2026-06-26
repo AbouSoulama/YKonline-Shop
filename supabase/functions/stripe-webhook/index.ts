@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 async function notifyPaidOrder(orderId: string) {
-  await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-order`, {
+  const notifyRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-order`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
@@ -16,6 +16,10 @@ async function notifyPaidOrder(orderId: string) {
     },
     body: JSON.stringify({ orderId, type: "paid" }),
   });
+  const notifyData = await notifyRes.json().catch(() => ({}));
+  if (!notifyRes.ok || !notifyData.success) {
+    console.error("notify-order failed from stripe-webhook:", notifyData);
+  }
 }
 
 Deno.serve(async (req) => {

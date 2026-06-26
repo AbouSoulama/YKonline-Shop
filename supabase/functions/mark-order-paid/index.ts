@@ -34,8 +34,9 @@ Deno.serve(async (req) => {
       });
     }
 
+    let notifySuccess = false;
     if (!wasPaid && fulfilled) {
-      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-order`, {
+      const notifyRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-order`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
@@ -43,9 +44,14 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({ orderId, type: "paid" }),
       });
+      const notifyData = await notifyRes.json().catch(() => ({}));
+      notifySuccess = notifyRes.ok && !!notifyData.success;
+      if (!notifySuccess) {
+        console.error("notify-order failed after payment:", notifyData);
+      }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, notified: notifySuccess }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

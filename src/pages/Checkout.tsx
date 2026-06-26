@@ -124,7 +124,7 @@ export default function Checkout() {
   const handlePaymentSuccess = async () => {
     if (orderInfo?.orderId) {
       const paid = await markOrderPaid(orderInfo.orderId, undefined, "stripe");
-      if (!paid.success) {
+      if (!paid.success || !paid.notified) {
         await notifyOrderPlaced(orderInfo.orderId, "paid");
       }
     }

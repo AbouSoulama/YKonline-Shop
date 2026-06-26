@@ -197,7 +197,7 @@ export async function fetchOrderByNumber(orderNumber: string): Promise<Order | n
   return mapRowToOrder(data);
 }
 
-export async function markOrderPaid(orderId: string, stripeSessionId?: string, paymentMethod?: string): Promise<{ success: boolean; error?: string }> {
+export async function markOrderPaid(orderId: string, stripeSessionId?: string, paymentMethod?: string): Promise<{ success: boolean; notified?: boolean; error?: string }> {
   if (!isSupabaseConfigured) return { success: false, error: "Database not configured." };
 
   const { data, error } = await supabase.functions.invoke("mark-order-paid", {
@@ -206,7 +206,7 @@ export async function markOrderPaid(orderId: string, stripeSessionId?: string, p
 
   if (error) return { success: false, error: error.message };
   if (data?.error) return { success: false, error: data.error as string };
-  return { success: true };
+  return { success: true, notified: data?.notified as boolean | undefined };
 }
 
 async function invokeNotifyOrderApi(orderId: string, type: OrderNotifyType): Promise<{ success: boolean; error?: string }> {

@@ -7,6 +7,7 @@ const cors = {
 };
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@ykonline.shop";
+const ADMIN_WHATSAPP = process.env.ADMIN_WHATSAPP || "13012669830";
 const RESEND_FROM = process.env.RESEND_FROM_EMAIL || "YKonline Shop <onboarding@resend.dev>";
 
 function formatItems(items) {
@@ -35,6 +36,30 @@ function orderEmailHtml(order, title, intro) {
   `;
 }
 
+function buildWhatsAppMessage(order, type) {
+  const items = order.items ?? [];
+  const heading =
+    type === "paid" ? "✅ NEW PAID ORDER — YKonline Shop"
+    : type === "shipped" ? "📦 ORDER SHIPPED"
+    : type === "delivered" ? "✅ ORDER DELIVERED"
+    : "🛒 NEW ORDER (pending payment)";
+
+  return [
+    heading,
+    `Order #${order.order_number}`,
+    `Customer: ${order.customer_name}`,
+    `Email: ${order.customer_email}`,
+    `Phone: ${order.shipping_address?.phone ?? "—"}`,
+    "",
+    formatItems(items),
+    "",
+    `Total: $${Number(order.total).toFixed(2)}`,
+    `Payment: ${order.payment_method ?? "stripe"}`,
+    "",
+    type === "paid" ? "⚡ Action required: prepare and ship this order." : "",
+  ].filter(Boolean).join("\n");
+}
+
 async function sendEmail(resendKey, to, subject, html) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -55,6 +80,64 @@ async function sendEmail(resendKey, to, subject, html) {
     return { ok: false, error };
   }
   return { ok: true };
+}
+
+function normalizePhone(phone) {
+  return phone.replace(/\D/g, "");
+}
+
+async function sendMetaWhatsApp(message) {
+  const token = process.env.WHATSAPP_CLOUD_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneId) return { ok: false, error: "Meta WhatsApp API not configured." };
+
+  const to = normalizePhone(ADMIN_WHATSAPP);
+  const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body: message.slice(0, 4000) },
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    return { ok: false, error };
+  }
+  return { ok: true, provider: "meta" };
+}
+
+async function sendCallMeBotWhatsApp(message) {
+  const apiKey = process.env.CALLMEBOT_API_KEY;
+  if (!apiKey) return { ok: false, error: "CallMeBot API key not configured." };
+
+  const phone = normalizePhone(ADMIN_WHATSAPP);
+  const url =
+    `https://api.callmebot.com/whatsapp.php?phone=%2B${phone}&text=${encodeURIComponent(message.slice(0, 1500))}&apikey=${apiKey}`;
+
+  const res = await fetch(url);
+  const body = await res.text();
+
+  if (!res.ok || body.toLowerCase().includes("error")) {
+    return { ok: false, error: body };
+  }
+  return { ok: true, provider: "callmebot" };
+}
+
+async function sendAdminWhatsApp(message) {
+  const meta = await sendMetaWhatsApp(message);
+  if (meta.ok) return meta;
+
+  const callmebot = await sendCallMeBotWhatsApp(message);
+  if (callmebot.ok) return callmebot;
+
+  return { ok: false, error: callmebot.error || meta.error };
 }
 
 export default async function handler(req, res) {
@@ -89,20 +172,32 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Order not found." });
     }
 
-    const items = order.items ?? [];
-    const whatsappMsg = [
-      type === "paid" ? "✅ NEW PAID ORDER" : type === "shipped" ? "📦 ORDER SHIPPED" : type === "delivered" ? "✅ ORDER DELIVERED" : "🛒 NEW ORDER (pending payment)",
-      `Order #${order.order_number}`,
-      `Customer: ${order.customer_name}`,
-      `Email: ${order.customer_email}`,
-      "",
-      formatItems(items),
-      "",
-      `Total: $${Number(order.total).toFixed(2)}`,
-    ].join("\n");
-
-    const results = { emailCustomer: false, emailAdmin: false };
+    const whatsappMsg = buildWhatsAppMessage(order, type);
+    const results = { emailCustomer: false, emailAdmin: false, whatsapp: false, whatsappProvider: "" };
     const errors = [];
+
+    if (type === "paid") {
+      const adminResult = await sendEmail(
+        resendKey,
+        [ADMIN_EMAIL],
+        `🚨 PAID ORDER #${order.order_number} — $${Number(order.total).toFixed(2)}`,
+        `<div style="font-family:Arial,sans-serif;padding:24px">
+          <h2 style="color:#0B6623">💰 Payment confirmed — new order!</h2>
+          <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
+          <p>Phone: ${order.shipping_address?.phone ?? "—"}</p>
+          <p style="font-size:18px;font-weight:bold;color:#FF7900">Total: $${Number(order.total).toFixed(2)}</p>
+          <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
+          <p style="margin-top:16px"><a href="https://ykonline.shop/admin">Open admin dashboard</a></p>
+        </div>`,
+      );
+      results.emailAdmin = adminResult.ok;
+      if (!adminResult.ok) errors.push(`admin: ${adminResult.error}`);
+
+      const wa = await sendAdminWhatsApp(whatsappMsg);
+      results.whatsapp = wa.ok;
+      results.whatsappProvider = wa.provider ?? "";
+      if (!wa.ok) errors.push(`whatsapp: ${wa.error}`);
+    }
 
     if (type === "created" && order.customer_email) {
       const r = await sendEmail(
@@ -148,13 +243,13 @@ export default async function handler(req, res) {
       if (!r.ok) errors.push(`customer: ${r.error}`);
     }
 
-    if (type === "created" || type === "paid") {
+    if (type === "created") {
       const adminResult = await sendEmail(
         resendKey,
         [ADMIN_EMAIL],
-        `${type === "paid" ? "Paid order" : "New order"} #${order.order_number}`,
+        `New order (pending) #${order.order_number}`,
         `<div style="font-family:Arial,sans-serif;padding:24px">
-          <h2 style="color:#0B6623">${type === "paid" ? "Payment confirmed" : "New order placed"}</h2>
+          <h2 style="color:#0B6623">New order placed (awaiting payment)</h2>
           <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
           <p>Total: $${Number(order.total).toFixed(2)}</p>
           <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
@@ -162,11 +257,20 @@ export default async function handler(req, res) {
       );
       results.emailAdmin = adminResult.ok;
       if (!adminResult.ok) errors.push(`admin: ${adminResult.error}`);
+
+      const wa = await sendAdminWhatsApp(whatsappMsg);
+      results.whatsapp = wa.ok;
+      results.whatsappProvider = wa.provider ?? "";
+      if (!wa.ok) errors.push(`whatsapp: ${wa.error}`);
     }
+
+    const success = type === "paid"
+      ? (results.emailAdmin || results.whatsapp)
+      : (results.emailCustomer || results.emailAdmin || results.whatsapp);
 
     Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
     return res.status(200).json({
-      success: results.emailCustomer || results.emailAdmin,
+      success,
       ...results,
       errors: errors.length ? errors : undefined,
     });

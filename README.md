@@ -61,6 +61,8 @@ SUPABASE_SERVICE_ROLE_KEY=  # dev local uniquement
 | `RESEND_API_KEY` | Oui (emails commande) |
 | `RESEND_FROM_EMAIL` | Recommandé |
 | `ADMIN_EMAIL` | Recommandé |
+| `ADMIN_WHATSAPP` | Oui (WhatsApp admin, ex. `13012669830`) |
+| `CALLMEBOT_API_KEY` | Recommandé (alertes WhatsApp) |
 
 ### Supabase Edge Functions (secrets)
 
@@ -70,7 +72,28 @@ supabase secrets set RESEND_FROM_EMAIL="YKonline Shop <contact@ykonline.shop>"
 supabase secrets set STRIPE_SECRET_KEY=sk_...
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
 supabase secrets set ADMIN_EMAIL=contact@ykonline.shop
+supabase secrets set ADMIN_WHATSAPP=13012669830
+supabase secrets set CALLMEBOT_API_KEY=votre_cle_callmebot
 ```
+
+### Alertes WhatsApp (recommandé : CallMeBot)
+
+Pour recevoir chaque commande payée sur WhatsApp **sans** configurer l’API Meta :
+
+1. Depuis le numéro admin (`+1 301 266 9830`), envoyez ce message WhatsApp au contact **CallMeBot** : `+34 644 44 71 67`
+2. Message : `I allow callmebot to send me messages`
+3. CallMeBot vous répond avec votre **clé API**
+4. Ajoutez-la dans Supabase **et** Vercel :
+   - `CALLMEBOT_API_KEY=...`
+   - `ADMIN_WHATSAPP=13012669830`
+
+Redéployez les Edge Functions après :
+
+```bash
+supabase functions deploy notify-order mark-order-paid stripe-webhook
+```
+
+*(Option avancée : `WHATSAPP_CLOUD_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` pour l’API Meta Business.)*
 
 ## Déploiement Vercel
 
