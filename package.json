@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npx playwright install chromium && tsx scripts/prerender.ts",
+    "build": "vite build && tsx scripts/generate-sitemap.ts",
+    "build:prerender": "vite build && npx playwright install chromium && tsx scripts/prerender.ts",
     "build:fast": "vite build",
     "preview": "vite preview",
     "supabase:deploy": "supabase functions deploy create-order create-payment-intent mark-order-paid notify-order create-checkout capture-paypal-order stripe-webhook verify-checkout track-order"
