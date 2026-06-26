@@ -38,7 +38,7 @@ export default function SubscribeForm({
     <div>
       <form
         onSubmit={handleSubmit}
-        className={`flex gap-3 ${layout === "row" ? "flex-col sm:flex-row" : "flex-col"} ${className}`}
+        className={`flex w-full max-w-full gap-3 min-w-0 ${layout === "row" ? "flex-col md:flex-row" : "flex-col"} ${className}`}
       >
         <input
           type="email"
@@ -46,10 +46,10 @@ export default function SubscribeForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Your email address"
-          className={inputClassName}
+          className={`min-w-0 w-full ${inputClassName}`}
           disabled={loading}
         />
-        <button type="submit" className={buttonClassName} disabled={loading}>
+        <button type="submit" className={`shrink-0 w-full md:w-auto ${buttonClassName}`} disabled={loading}>
           {loading ? "Subscribing..." : "Subscribe"}
         </button>
       </form>

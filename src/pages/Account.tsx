@@ -136,13 +136,13 @@ export default function Account() {
         <section className="bg-gradient-to-br from-green to-[#052d13] text-white">
           <div className="container-page py-10 md:py-14">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-orange text-3xl font-extrabold shadow-lg">
+              <div className="flex items-center gap-5 min-w-0">
+                <div className="flex h-20 w-20 shrink-0 aspect-square min-h-[5rem] min-w-[5rem] items-center justify-center rounded-full bg-orange text-2xl font-extrabold shadow-lg leading-none">
                   {initials}
                 </div>
-                <div>
-                  <h1 className="font-display text-3xl md:text-4xl font-extrabold">Welcome back, {firstName}!</h1>
-                  <p className="mt-1 text-white/70">{user.email}</p>
+                <div className="min-w-0">
+                  <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold break-words">Welcome back, {firstName}!</h1>
+                  <p className="mt-1 text-white/70 text-sm sm:text-base truncate">{user.email}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">

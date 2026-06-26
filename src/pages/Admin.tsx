@@ -449,25 +449,44 @@ export default function Admin() {
 
       {/* Main */}
       <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <button type="button" onClick={() => setMobileNavOpen(true)} className="lg:hidden p-2 rounded-xl border border-gray-200 text-gray-700 shrink-0" aria-label="Open menu">
-              <Menu size={22} />
+        {/* Mobile admin bar — always visible on phones/tablets */}
+        <div className="lg:hidden sticky top-0 z-[100] bg-gradient-to-r from-[#052d13] to-green text-white shadow-lg">
+          <div className="flex items-center justify-between gap-2 px-3 py-3">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-white/20 px-3 py-2.5 text-sm font-bold shrink-0"
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+              <span>Menu</span>
             </button>
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400">Dashboard</p>
-              <h2 className="font-display text-xl sm:text-2xl font-bold text-gray-950 capitalize truncate">{tab}</h2>
-            </div>
+            <p className="font-display font-bold text-sm truncate capitalize px-1">{tab}</p>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 rounded-xl bg-white/20 px-3 py-2.5 text-sm font-bold shrink-0"
+              aria-label="Sign out"
+            >
+              <LogOut size={18} />
+              <span>Out</span>
+            </button>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="relative hidden md:block">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-green w-56" />
+        </div>
+
+        <div className="hidden lg:block sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400">Dashboard</p>
+              <h2 className="font-display text-2xl font-bold text-gray-950 capitalize">{tab}</h2>
             </div>
-            <button type="button" onClick={handleSignOut} className="lg:hidden flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 hover:border-red-200 hover:text-red-600">
-              <LogOut size={16} /> <span className="hidden xs:inline">Out</span>
-            </button>
-            <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white object-contain p-0.5 shadow-md" />
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-green w-56" />
+              </div>
+              <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-10 w-10 rounded-full bg-white object-contain p-0.5 shadow-md" />
+            </div>
           </div>
         </div>
 

@@ -134,7 +134,13 @@ export async function fetchOrders(): Promise<Order[]> {
 export async function updateOrderStatus(id: string, status: string): Promise<void> {
   if (!isSupabaseConfigured) return;
   await supabase.from("orders").update({ status }).eq("id", id);
+
+  if (status === "shipped" || status === "delivered") {
+    void notifyOrderPlaced(id, status);
+  }
 }
+
+export type OrderNotifyType = "created" | "paid" | "shipped" | "delivered";
 
 function mapRowToOrder(row: Record<string, unknown>): Order {
   return {
@@ -203,7 +209,7 @@ export async function markOrderPaid(orderId: string, stripeSessionId?: string, p
   return { success: true };
 }
 
-async function invokeNotifyOrderApi(orderId: string, type: "created" | "paid"): Promise<{ success: boolean; error?: string }> {
+async function invokeNotifyOrderApi(orderId: string, type: OrderNotifyType): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await fetch("/api/notify-order", {
       method: "POST",
@@ -220,7 +226,7 @@ async function invokeNotifyOrderApi(orderId: string, type: "created" | "paid"): 
   }
 }
 
-export async function notifyOrderPlaced(orderId: string, type: "created" | "paid" = "created"): Promise<{ success: boolean; error?: string }> {
+export async function notifyOrderPlaced(orderId: string, type: OrderNotifyType = "created"): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured) return { success: false, error: "Database not configured." };
 
   const { data, error } = await supabase.functions.invoke("notify-order", { body: { orderId, type } });

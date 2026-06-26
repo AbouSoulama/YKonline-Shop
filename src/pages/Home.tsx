@@ -200,9 +200,9 @@ export default function Home() {
             </div>
             <SubscribeForm
               layout="row"
-              className="bg-white rounded-full p-2 shadow-xl"
-              inputClassName="flex-1 px-5 py-3 rounded-full text-gray-800 focus:outline-none"
-              buttonClassName="bg-green hover:bg-green-dark text-white font-semibold px-6 py-3 rounded-full transition-colors whitespace-nowrap"
+              className="bg-white rounded-2xl md:rounded-full p-3 md:p-2 shadow-xl w-full max-w-full overflow-hidden"
+              inputClassName="flex-1 min-w-0 px-5 py-3 rounded-xl md:rounded-full text-gray-800 focus:outline-none bg-white border-0"
+              buttonClassName="bg-green hover:bg-green-dark text-white font-semibold px-6 py-3 rounded-xl md:rounded-full transition-colors"
             />
           </div>
         </div>

@@ -91,7 +91,7 @@ export default async function handler(req, res) {
 
     const items = order.items ?? [];
     const whatsappMsg = [
-      type === "paid" ? "✅ NEW PAID ORDER" : "🛒 NEW ORDER (pending payment)",
+      type === "paid" ? "✅ NEW PAID ORDER" : type === "shipped" ? "📦 ORDER SHIPPED" : type === "delivered" ? "✅ ORDER DELIVERED" : "🛒 NEW ORDER (pending payment)",
       `Order #${order.order_number}`,
       `Customer: ${order.customer_name}`,
       `Email: ${order.customer_email}`,
@@ -126,19 +126,43 @@ export default async function handler(req, res) {
       if (!r.ok) errors.push(`customer: ${r.error}`);
     }
 
-    const adminResult = await sendEmail(
-      resendKey,
-      [ADMIN_EMAIL],
-      `${type === "paid" ? "Paid order" : "New order"} #${order.order_number}`,
-      `<div style="font-family:Arial,sans-serif;padding:24px">
-        <h2 style="color:#0B6623">${type === "paid" ? "Payment confirmed" : "New order placed"}</h2>
-        <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
-        <p>Total: $${Number(order.total).toFixed(2)}</p>
-        <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
-      </div>`,
-    );
-    results.emailAdmin = adminResult.ok;
-    if (!adminResult.ok) errors.push(`admin: ${adminResult.error}`);
+    if (type === "shipped" && order.customer_email) {
+      const r = await sendEmail(
+        resendKey,
+        [order.customer_email],
+        `Your order has been shipped — #${order.order_number}`,
+        orderEmailHtml(order, "Your order is on its way!", "Great news! Your order has been shipped and is on its way to you."),
+      );
+      results.emailCustomer = r.ok;
+      if (!r.ok) errors.push(`customer: ${r.error}`);
+    }
+
+    if (type === "delivered" && order.customer_email) {
+      const r = await sendEmail(
+        resendKey,
+        [order.customer_email],
+        `Your order has been delivered — #${order.order_number}`,
+        orderEmailHtml(order, "Order delivered!", "Your order has been delivered. We hope you enjoy your purchase!"),
+      );
+      results.emailCustomer = r.ok;
+      if (!r.ok) errors.push(`customer: ${r.error}`);
+    }
+
+    if (type === "created" || type === "paid") {
+      const adminResult = await sendEmail(
+        resendKey,
+        [ADMIN_EMAIL],
+        `${type === "paid" ? "Paid order" : "New order"} #${order.order_number}`,
+        `<div style="font-family:Arial,sans-serif;padding:24px">
+          <h2 style="color:#0B6623">${type === "paid" ? "Payment confirmed" : "New order placed"}</h2>
+          <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
+          <p>Total: $${Number(order.total).toFixed(2)}</p>
+          <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
+        </div>`,
+      );
+      results.emailAdmin = adminResult.ok;
+      if (!adminResult.ok) errors.push(`admin: ${adminResult.error}`);
+    }
 
     Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
     return res.status(200).json({
