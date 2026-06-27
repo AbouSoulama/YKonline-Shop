@@ -7,7 +7,8 @@ import { useProducts } from "../context/ProductsContext";
 import { calculateShipping, STORE_ADDRESS } from "../lib/shipping";
 import { createOrder, validateCartStock, notifyOrderPlaced, markOrderPaid } from "../lib/orders";
 import { createCardPaymentIntent, isStripeConfigured, isPayPalConfigured } from "../lib/payments";
-import { validateEmail, validateName, validatePhone } from "../lib/validation";
+import { validateEmail, validateName, validatePhone, validatePostalCode, validateState } from "../lib/validation";
+import { US_STATES, isUnitedStates, countryToIso } from "../constants/usStates";
 import { PaymentMethodsBar, CreditCardLogo, PayPalLogo } from "../components/PaymentLogos";
 import CardPayment from "../components/CardPayment";
 import PayPalPayment from "../components/PayPalPayment";
@@ -37,8 +38,12 @@ export default function Checkout() {
     lastName: user?.name?.split(" ").slice(1).join(" ") ?? "",
     address: "",
     city: "",
+    state: "",
+    postalCode: "",
     country: "United States",
   });
+
+  const isUS = isUnitedStates(form.country);
 
   const activeShipping = shippingMethod === "express" && quote ? quote.expressCost : (quote?.cost ?? shipping);
   const orderTotal = subtotal - discount + activeShipping;
@@ -88,6 +93,10 @@ export default function Checkout() {
     if (lnErr) return lnErr;
     if (!form.address.trim() || form.address.length < 5) return "Please enter a valid delivery address.";
     if (!form.city.trim()) return "Please enter your city.";
+    const stateErr = validateState(form.state, form.country);
+    if (stateErr) return stateErr;
+    const zipErr = validatePostalCode(form.postalCode, form.country);
+    if (zipErr) return zipErr;
     if (!form.country.trim()) return "Please enter your country.";
     return null;
   };
@@ -119,6 +128,8 @@ export default function Checkout() {
     shippingAddress: {
       address: form.address.trim(),
       city: form.city.trim(),
+      state: form.state.trim(),
+      postalCode: form.postalCode.trim(),
       country: form.country.trim(),
       phone: form.phone.trim(),
     },
@@ -226,7 +237,19 @@ export default function Checkout() {
                 <div><label className="block text-sm font-semibold mb-1">Last name</label><input required type="text" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
                 <div className="sm:col-span-2"><label className="block text-sm font-semibold mb-1">Street address</label><input required type="text" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="123 Main Street" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
                 <div><label className="block text-sm font-semibold mb-1">City</label><input required type="text" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
-                <div><label className="block text-sm font-semibold mb-1">Country</label><input required type="text" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1">State {isUS ? "*" : ""}</label>
+                  {isUS ? (
+                    <select required value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green">
+                      <option value="">Select state</option>
+                      {US_STATES.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+                    </select>
+                  ) : (
+                    <input type="text" value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} placeholder="State / province" className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" />
+                  )}
+                </div>
+                <div><label className="block text-sm font-semibold mb-1">ZIP / Postal code</label><input required type="text" value={form.postalCode} onChange={e => setForm({ ...form, postalCode: e.target.value })} placeholder={isUS ? "20602" : "Postal code"} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
+                <div className="sm:col-span-2"><label className="block text-sm font-semibold mb-1">Country</label><input required type="text" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
               </div>
             </div>
           )}
@@ -348,7 +371,13 @@ export default function Checkout() {
                             name: `${form.firstName} ${form.lastName}`.trim(),
                             email: form.email,
                             phone: form.phone,
-                            address: { line1: form.address, city: form.city, country: form.country === "United States" ? "US" : form.country },
+                            address: {
+                              line1: form.address,
+                              city: form.city,
+                              state: form.state,
+                              postal_code: form.postalCode,
+                              country: countryToIso(form.country),
+                            },
                           }}
                           onSuccess={handlePaymentSuccess}
                           onError={setError}

@@ -34,3 +34,24 @@ export function validatePhone(phone: string): string | null {
   if (digits.length < 8) return "Please enter a valid phone number.";
   return null;
 }
+
+export function validatePostalCode(postalCode: string, country = "United States"): string | null {
+  const trimmed = postalCode.trim();
+  if (!trimmed) return "ZIP / postal code is required.";
+  const isUS = ["united states", "usa", "us", "united states of america"].includes(country.trim().toLowerCase());
+  if (isUS && !/^\d{5}(-\d{4})?$/.test(trimmed)) {
+    return "Please enter a valid US ZIP code (e.g. 20602 or 20602-1234).";
+  }
+  if (trimmed.length < 3 || trimmed.length > 12) {
+    return "Please enter a valid postal code.";
+  }
+  return null;
+}
+
+export function validateState(state: string, country = "United States"): string | null {
+  const trimmed = state.trim();
+  const isUS = ["united states", "usa", "us", "united states of america"].includes(country.trim().toLowerCase());
+  if (isUS && !trimmed) return "Please select your state.";
+  if (trimmed && trimmed.length > 50) return "State name is too long.";
+  return null;
+}

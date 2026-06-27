@@ -11,6 +11,7 @@ import { useAuth, confirmLogout } from "../context/AuthContext";
 import { useReviews } from "../context/ReviewContext";
 import { useProducts } from "../context/ProductsContext";
 import { fetchOrders, updateOrderStatus as dbUpdateOrderStatus } from "../lib/orders";
+import { getShippingAddressLines } from "../lib/shippingAddress";
 import { fetchAllPosts, createBlogPost, deleteBlogPost, toggleBlogPostStatus, type BlogPost as BlogPostType } from "../lib/blog";
 import { upsertProduct, deleteProduct as dbDeleteProduct, generateProductId } from "../lib/products";
 import { uploadProductImage } from "../lib/storage";
@@ -25,7 +26,7 @@ interface Product {
 }
 interface Order {
   dbId: string; id: string; customer: string; email: string; date: string; total: number; status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled"; itemCount: number;
-  shippingAddress?: { address: string; city: string; country: string; phone: string };
+  shippingAddress?: { address: string; city: string; state?: string; postalCode?: string; country: string; phone: string };
   lineItems: Array<{ name: string; quantity: number; price: number; size?: string }>;
 }
 interface Customer {
@@ -50,12 +51,12 @@ const initProducts: Product[] = [
 ];
 
 const initOrders: Order[] = [
-  { id: "YK-2026-1089", dbId: "1", customer: "Sarah Johnson", email: "sarah@mail.com", date: "Jan 15, 2026", total: 67.80, status: "Pending", itemCount: 3, lineItems: [], shippingAddress: { address: "123 Main St", city: "Washington", country: "United States", phone: "+1 555 0100" } },
-  { id: "YK-2026-1088", dbId: "2", customer: "Aminata Diallo", email: "aminata@mail.com", date: "Jan 14, 2026", total: 42.90, status: "Processing", itemCount: 1, lineItems: [], shippingAddress: { address: "456 Oak Ave", city: "Baltimore", country: "United States", phone: "+1 555 0101" } },
-  { id: "YK-2026-1087", dbId: "3", customer: "Claire Martin", email: "claire@mail.com", date: "Jan 13, 2026", total: 24.90, status: "Shipped", itemCount: 1, lineItems: [], shippingAddress: { address: "789 Pine Rd", city: "Alexandria", country: "United States", phone: "+1 555 0102" } },
-  { id: "YK-2026-1086", dbId: "4", customer: "Sophie Laurent", email: "sophie@mail.com", date: "Jan 12, 2026", total: 99.70, status: "Delivered", itemCount: 4, lineItems: [], shippingAddress: { address: "321 Elm St", city: "Richmond", country: "United States", phone: "+1 555 0103" } },
-  { id: "YK-2026-1085", dbId: "5", customer: "Mariam Keita", email: "mariam@mail.com", date: "Jan 11, 2026", total: 19.90, status: "Delivered", itemCount: 1, lineItems: [], shippingAddress: { address: "654 Cedar Ln", city: "Fredericksburg", country: "United States", phone: "+1 555 0104" } },
-  { id: "YK-2026-1084", dbId: "6", customer: "Emma Wilson", email: "emma@mail.com", date: "Jan 10, 2026", total: 59.90, status: "Cancelled", itemCount: 2, lineItems: [], shippingAddress: { address: "987 Birch Dr", city: "Annapolis", country: "United States", phone: "+1 555 0105" } },
+  { id: "YK-2026-1089", dbId: "1", customer: "Sarah Johnson", email: "sarah@mail.com", date: "Jan 15, 2026", total: 67.80, status: "Pending", itemCount: 3, lineItems: [], shippingAddress: { address: "123 Main St", city: "Washington", state: "DC", postalCode: "20001", country: "United States", phone: "+1 555 0100" } },
+  { id: "YK-2026-1088", dbId: "2", customer: "Aminata Diallo", email: "aminata@mail.com", date: "Jan 14, 2026", total: 42.90, status: "Processing", itemCount: 1, lineItems: [], shippingAddress: { address: "456 Oak Ave", city: "Baltimore", state: "MD", postalCode: "21201", country: "United States", phone: "+1 555 0101" } },
+  { id: "YK-2026-1087", dbId: "3", customer: "Claire Martin", email: "claire@mail.com", date: "Jan 13, 2026", total: 24.90, status: "Shipped", itemCount: 1, lineItems: [], shippingAddress: { address: "789 Pine Rd", city: "Alexandria", state: "VA", postalCode: "22301", country: "United States", phone: "+1 555 0102" } },
+  { id: "YK-2026-1086", dbId: "4", customer: "Sophie Laurent", email: "sophie@mail.com", date: "Jan 12, 2026", total: 99.70, status: "Delivered", itemCount: 4, lineItems: [], shippingAddress: { address: "321 Elm St", city: "Richmond", state: "VA", postalCode: "23219", country: "United States", phone: "+1 555 0103" } },
+  { id: "YK-2026-1085", dbId: "5", customer: "Mariam Keita", email: "mariam@mail.com", date: "Jan 11, 2026", total: 19.90, status: "Delivered", itemCount: 1, lineItems: [], shippingAddress: { address: "654 Cedar Ln", city: "Fredericksburg", state: "VA", postalCode: "22401", country: "United States", phone: "+1 555 0104" } },
+  { id: "YK-2026-1084", dbId: "6", customer: "Emma Wilson", email: "emma@mail.com", date: "Jan 10, 2026", total: 59.90, status: "Cancelled", itemCount: 2, lineItems: [], shippingAddress: { address: "987 Birch Dr", city: "Annapolis", state: "MD", postalCode: "21401", country: "United States", phone: "+1 555 0105" } },
 ];
 
 const initCustomers: Customer[] = [
@@ -650,10 +651,10 @@ export default function Admin() {
                         <div>
                           <p className="text-gray-400 text-xs mb-1">Shipping address</p>
                           {o.shippingAddress ? (
-                            <div className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">
-                              <p className="font-semibold">{o.shippingAddress.address}</p>
-                              <p>{o.shippingAddress.city}, {o.shippingAddress.country}</p>
-                              <p className="text-xs text-gray-500 mt-1">{o.shippingAddress.phone}</p>
+                            <div className="text-sm text-gray-800 leading-relaxed">
+                              {getShippingAddressLines(o.shippingAddress).map((line, idx, lines) => (
+                                <p key={idx} className={idx === 0 ? "font-semibold" : idx === lines.length - 1 ? "text-xs text-gray-500 mt-1" : ""}>{line}</p>
+                              ))}
                             </div>
                           ) : (
                             <p className="text-gray-500">—</p>

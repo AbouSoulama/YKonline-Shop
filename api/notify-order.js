@@ -20,8 +20,11 @@ function formatShippingAddress(addr) {
   if (!addr || typeof addr !== "object") return "—";
   const lines = [
     addr.address?.trim(),
-    [addr.city?.trim(), addr.country?.trim()].filter(Boolean).join(", "),
-    addr.phone?.trim() ? `Phone: ${addr.phone.trim()}` : "",
+    addr.city?.trim(),
+    addr.state?.trim(),
+    (addr.postalCode ?? addr.zip)?.trim(),
+    addr.country?.trim(),
+    addr.phone?.trim(),
   ].filter(Boolean);
   return lines.length ? lines.join("\n") : "—";
 }
@@ -204,7 +207,6 @@ export default async function handler(req, res) {
         `<div style="font-family:Arial,sans-serif;padding:24px">
           <h2 style="color:#0B6623">💰 Payment confirmed — new order!</h2>
           <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
-          <p>Phone: ${order.shipping_address?.phone ?? "—"}</p>
           <p><strong>Shipping address:</strong></p>
           <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${formatShippingAddress(order.shipping_address)}</pre>
           <p style="font-size:18px;font-weight:bold;color:#FF7900">Total: $${Number(order.total).toFixed(2)}</p>

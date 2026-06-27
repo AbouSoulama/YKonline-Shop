@@ -10,11 +10,22 @@ export function formatItems(items: Array<{ name: string; quantity: number; price
 
 export function formatShippingAddress(addr: unknown): string {
   if (!addr || typeof addr !== "object") return "—";
-  const a = addr as { address?: string; city?: string; country?: string; phone?: string };
+  const a = addr as {
+    address?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    zip?: string;
+    country?: string;
+    phone?: string;
+  };
   const lines = [
     a.address?.trim(),
-    [a.city?.trim(), a.country?.trim()].filter(Boolean).join(", "),
-    a.phone?.trim() ? `Phone: ${a.phone.trim()}` : "",
+    a.city?.trim(),
+    a.state?.trim(),
+    (a.postalCode ?? a.zip)?.trim(),
+    a.country?.trim(),
+    a.phone?.trim(),
   ].filter(Boolean);
   return lines.length ? lines.join("\n") : "—";
 }
