@@ -1,6 +1,5 @@
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { getPayPalClientId, createPayPalOrder, capturePayPalOrder } from "../lib/payments";
-import { markOrderPaid } from "../lib/orders";
 
 export default function PayPalPayment({ orderId, orderNumber, total, onSuccess, onError }: {
   orderId: string;
@@ -53,7 +52,6 @@ export default function PayPalPayment({ orderId, orderNumber, total, onSuccess, 
             return;
           }
 
-          await markOrderPaid(orderId, undefined, "paypal");
           onSuccess();
         }}
         onError={() => onError("PayPal payment failed. Please try again.")}

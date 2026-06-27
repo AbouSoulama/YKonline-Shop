@@ -6,8 +6,12 @@ function PaymentImg({ src, alt, className = "h-6", darkBg = false }: { src: stri
   );
 }
 
-export function VisaLogo({ className = "h-6" }: { className?: string }) {
-  return <PaymentImg src="/payments/visa.svg" alt="Visa" className={className} />;
+export function VisaLogo({ className = "h-5" }: { className?: string }) {
+  return (
+    <div className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-3 py-1.5 shadow-sm min-w-[3.5rem]">
+      <img src="/payments/visa.svg" alt="Visa" className={`${className} w-auto object-contain`} />
+    </div>
+  );
 }
 
 export function MastercardLogo({ className = "h-6" }: { className?: string }) {

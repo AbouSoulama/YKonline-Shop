@@ -28,7 +28,7 @@ export default function Shop() {
   const [size, setSize] = useState("All");
   const [type, setType] = useState<(typeof types)[number]>("All");
   const [usage, setUsage] = useState("All");
-  const [sort, setSort] = useState("popular");
+  const [sort, setSort] = useState("newest");
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [mobileFilters, setMobileFilters] = useState(false);
 
@@ -49,7 +49,7 @@ export default function Shop() {
     switch (sort) {
       case "price-asc": list.sort((a, b) => a.price - b.price); break;
       case "price-desc": list.sort((a, b) => b.price - a.price); break;
-      case "newest": list.sort((a, b) => b.reviews - a.reviews); break;
+      case "newest": list.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")); break;
       case "rating": list.sort((a, b) => b.rating - a.rating); break;
       default: list.sort((a, b) => b.reviews - a.reviews);
     }

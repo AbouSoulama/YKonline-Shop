@@ -19,6 +19,7 @@ export interface Product {
   storage: string;
   benefits: string[];
   howToUse: { area: string; method: string }[];
+  createdAt?: string;
 }
 
 const RAW_IMAGE = "/images/raw-shea-jar.jpg";

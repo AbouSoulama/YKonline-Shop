@@ -6,10 +6,13 @@ import { useAuth } from "../context/AuthContext";
 import { useProducts } from "../context/ProductsContext";
 import { calculateShipping, STORE_ADDRESS } from "../lib/shipping";
 import { createOrder, validateCartStock, notifyOrderPlaced, markOrderPaid } from "../lib/orders";
-import { createCardPaymentIntent, isStripeConfigured } from "../lib/payments";
+import { createCardPaymentIntent, isStripeConfigured, isPayPalConfigured } from "../lib/payments";
 import { validateEmail, validateName, validatePhone } from "../lib/validation";
-import { PaymentMethodsBar } from "../components/PaymentLogos";
+import { PaymentMethodsBar, CreditCardLogo, PayPalLogo } from "../components/PaymentLogos";
 import CardPayment from "../components/CardPayment";
+import PayPalPayment from "../components/PayPalPayment";
+
+type PaymentChoice = "card" | "paypal" | null;
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -25,6 +28,7 @@ export default function Checkout() {
   const [orderInfo, setOrderInfo] = useState<{ orderId: string; orderNumber: string } | null>(null);
   const [cardSecret, setCardSecret] = useState<string | null>(null);
   const [loadingCard, setLoadingCard] = useState(false);
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>(null);
 
   const [form, setForm] = useState({
     email: user?.email ?? "",
@@ -40,7 +44,7 @@ export default function Checkout() {
   const orderTotal = subtotal - discount + activeShipping;
 
   useEffect(() => {
-    if (step !== 3 || !orderInfo) {
+    if (step !== 3 || !orderInfo || paymentChoice !== "card") {
       setCardSecret(null);
       return;
     }
@@ -61,7 +65,7 @@ export default function Checkout() {
     });
 
     return () => { cancelled = true; };
-  }, [step, orderInfo]);
+  }, [step, orderInfo, paymentChoice]);
 
   if (items.length === 0) {
     return (
@@ -123,7 +127,8 @@ export default function Checkout() {
 
   const handlePaymentSuccess = async () => {
     if (orderInfo?.orderId) {
-      const paid = await markOrderPaid(orderInfo.orderId, undefined, "stripe");
+      const method = paymentChoice === "paypal" ? "paypal" : "stripe";
+      const paid = await markOrderPaid(orderInfo.orderId, undefined, method);
       if (!paid.success || !paid.notified) {
         await notifyOrderPlaced(orderInfo.orderId, "paid");
       }
@@ -173,6 +178,8 @@ export default function Checkout() {
 
       setOrderInfo(order);
       void notifyOrderPlaced(order.orderId, "created");
+      setPaymentChoice(null);
+      setCardSecret(null);
       setStep(3);
     }
   };
@@ -281,42 +288,113 @@ export default function Checkout() {
                   <h2 className="font-display text-2xl font-bold">Payment method</h2>
                 </div>
 
-                <p className="text-sm text-gray-600">
-                  Pay securely with card, Apple Pay, Google Pay or PayPal — all processed by Stripe.
-                </p>
+                {!paymentChoice ? (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      Choose how you would like to pay. All transactions are secure and encrypted.
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentChoice("card")}
+                        disabled={!isStripeConfigured}
+                        className="flex flex-col items-center gap-4 p-6 rounded-2xl border-2 border-cream hover:border-green hover:bg-green-light/20 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <CreditCardLogo className="h-7" />
+                        <div className="text-center w-full">
+                          <p className="font-display font-bold text-lg text-gray-900">Credit Card</p>
+                          <p className="text-sm text-gray-500 mt-1">Visa, Mastercard, Amex</p>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentChoice("paypal")}
+                        disabled={!isPayPalConfigured}
+                        className="flex flex-col items-center gap-4 p-6 rounded-2xl border-2 border-cream hover:border-green hover:bg-green-light/20 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <PayPalLogo className="h-7" />
+                        <div className="text-center w-full">
+                          <p className="font-display font-bold text-lg text-gray-900">PayPal</p>
+                          <p className="text-sm text-gray-500 mt-1">Pay with your PayPal balance</p>
+                        </div>
+                        {!isPayPalConfigured && (
+                          <p className="text-xs text-amber-600">PayPal not configured yet</p>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                ) : paymentChoice === "card" ? (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      Enter your card details below. Your payment is processed securely by Stripe.
+                    </p>
 
-                {!isStripeConfigured && (
-                  <p className="text-red-600 text-sm">Configure VITE_STRIPE_PUBLISHABLE_KEY (pk_test_...) in your .env file.</p>
+                    {!isStripeConfigured && (
+                      <p className="text-red-600 text-sm">Configure VITE_STRIPE_PUBLISHABLE_KEY (pk_test_...) in your .env file.</p>
+                    )}
+
+                    {loadingCard && (
+                      <div className="flex items-center gap-2 text-gray-500 py-6"><Loader2 size={18} className="animate-spin" /> Preparing secure payment form...</div>
+                    )}
+
+                    {cardSecret && orderInfo && (
+                      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                        <CardPayment
+                          clientSecret={cardSecret}
+                          orderId={orderInfo.orderId}
+                          orderNumber={orderInfo.orderNumber}
+                          total={orderTotal}
+                          billingDetails={{
+                            name: `${form.firstName} ${form.lastName}`.trim(),
+                            email: form.email,
+                            phone: form.phone,
+                            address: { line1: form.address, city: form.city, country: form.country === "United States" ? "US" : form.country },
+                          }}
+                          onSuccess={handlePaymentSuccess}
+                          onError={setError}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> SSL encrypted · PCI compliant · Powered by Stripe</div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      You will be redirected to PayPal to complete your purchase securely.
+                    </p>
+                    {orderInfo && (
+                      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                        <PayPalPayment
+                          orderId={orderInfo.orderId}
+                          orderNumber={orderInfo.orderNumber}
+                          total={orderTotal}
+                          onSuccess={handlePaymentSuccess}
+                          onError={setError}
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> Secure checkout · Powered by PayPal</div>
+                  </>
                 )}
-
-                {loadingCard && (
-                  <div className="flex items-center gap-2 text-gray-500 py-6"><Loader2 size={18} className="animate-spin" /> Preparing secure payment form...</div>
-                )}
-
-                {cardSecret && orderInfo && (
-                  <div className="rounded-2xl border border-gray-200 bg-white p-5">
-                    <CardPayment
-                      clientSecret={cardSecret}
-                      orderId={orderInfo.orderId}
-                      orderNumber={orderInfo.orderNumber}
-                      total={orderTotal}
-                      billingDetails={{
-                        name: `${form.firstName} ${form.lastName}`.trim(),
-                        email: form.email,
-                        phone: form.phone,
-                        address: { line1: form.address, city: form.city, country: form.country === "United States" ? "US" : form.country },
-                      }}
-                      onSuccess={handlePaymentSuccess}
-                      onError={setError}
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 text-sm text-gray-500"><Lock size={14} className="text-green" /> SSL encrypted · PCI compliant · Powered by Stripe</div>
               </div>
 
               <div className="flex justify-between gap-3">
-                <button type="button" onClick={() => { setStep(2); setOrderInfo(null); setCardSecret(null); }} className="btn-outline">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (paymentChoice) {
+                      setPaymentChoice(null);
+                      setCardSecret(null);
+                      setError("");
+                    } else {
+                      setStep(2);
+                      setOrderInfo(null);
+                      setCardSecret(null);
+                    }
+                  }}
+                  className="btn-outline"
+                >
                   Back
                 </button>
               </div>

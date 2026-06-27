@@ -24,6 +24,7 @@ interface ProductRow {
   storage: string | null;
   benefits: string[] | null;
   how_to_use: { area: string; method: string }[] | null;
+  created_at?: string | null;
 }
 
 interface ProductsContextValue {
@@ -49,7 +50,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
 
     if (!error && data?.length) {
       setProducts(data.map(row => mapProductRow(row as ProductRow)));

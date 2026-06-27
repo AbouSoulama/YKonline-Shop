@@ -58,9 +58,9 @@ SUPABASE_SERVICE_ROLE_KEY=  # dev local uniquement
 | `VITE_SITE_URL` | Oui |
 | `STRIPE_SECRET_KEY` | Oui (API paiement) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Oui (API emails) |
-| `RESEND_API_KEY` | Oui (emails commande) |
-| `RESEND_FROM_EMAIL` | Recommandé |
-| `ADMIN_EMAIL` | Recommandé |
+| `RESEND_API_KEY` | **Obligatoire** (emails client + admin) |
+| `RESEND_FROM_EMAIL` | Recommandé (`YKonline Shop <contact@ykonline.shop>`) |
+| `ADMIN_EMAIL` | **Obligatoire** (votre email admin) |
 | `ADMIN_WHATSAPP` | Oui (WhatsApp admin, ex. `13012669830`) |
 | `CALLMEBOT_API_KEY` | Recommandé (alertes WhatsApp) |
 
@@ -80,12 +80,15 @@ supabase secrets set CALLMEBOT_API_KEY=votre_cle_callmebot
 
 Pour recevoir chaque commande payée sur WhatsApp **sans** configurer l’API Meta :
 
-1. Depuis le numéro admin (`+1 301 266 9830`), envoyez ce message WhatsApp au contact **CallMeBot** : `+34 644 44 71 67`
-2. Message : `I allow callmebot to send me messages`
-3. CallMeBot vous répond avec votre **clé API**
-4. Ajoutez-la dans Supabase **et** Vercel :
+1. Depuis le numéro admin **+1 301 266 9830**, ajoutez le contact **+34 644 44 71 67** sur WhatsApp
+2. Envoyez **exactement** (en anglais) : `I allow callmebot to send me messages`
+3. Attendez la réponse avec votre **clé API** (peut prendre quelques minutes)
+4. Si pas de réponse : essayez `Please send me my API key` ou inscrivez-vous sur [callmebot.com](https://www.callmebot.com/blog/free-api-whatsapp-messages/)
+5. Ajoutez dans Supabase **et** Vercel :
    - `CALLMEBOT_API_KEY=...`
    - `ADMIN_WHATSAPP=13012669830`
+
+> **Emails admin** : sans `RESEND_API_KEY` + `ADMIN_EMAIL` sur Vercel et Supabase, aucun email ne part. Validez aussi votre domaine dans Resend pour `RESEND_FROM_EMAIL`.
 
 Redéployez les Edge Functions après :
 
@@ -94,6 +97,10 @@ supabase functions deploy notify-order mark-order-paid stripe-webhook
 ```
 
 *(Option avancée : `WHATSAPP_CLOUD_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` pour l’API Meta Business.)*
+
+### Upload images produits (admin)
+
+Exécutez dans Supabase → SQL Editor : `supabase/migrations/20240625_product_images_storage.sql`
 
 ## Déploiement Vercel
 

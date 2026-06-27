@@ -13,6 +13,7 @@ import { useProducts } from "../context/ProductsContext";
 import { fetchOrders, updateOrderStatus as dbUpdateOrderStatus } from "../lib/orders";
 import { fetchAllPosts, createBlogPost, deleteBlogPost, toggleBlogPostStatus, type BlogPost as BlogPostType } from "../lib/blog";
 import { upsertProduct, deleteProduct as dbDeleteProduct, generateProductId } from "../lib/products";
+import { uploadProductImage } from "../lib/storage";
 import { fetchPromoCodes, upsertPromoCode, togglePromoActive as dbTogglePromo } from "../lib/promos";
 import type { Product as StoreProduct } from "../data/products";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
@@ -20,7 +21,7 @@ import { slugify } from "../constants/site";
 
 // ── Types ──
 interface Product {
-  id: string; name: string; tagline: string; description: string; size: string; type: string; price: number; oldPrice: number; stock: number; status: "Active" | "Draft"; image: string; badge: string; ingredients: string; storage: string; usage: string[]; rating: number; reviews: number;
+  id: string; name: string; tagline: string; description: string; size: string; type: string; price: number; oldPrice: number; stock: number; status: "Active" | "Draft"; image: string; gallery: string[]; badge: string; ingredients: string; storage: string; usage: string[]; rating: number; reviews: number;
 }
 interface Order {
   dbId: string; id: string; customer: string; email: string; date: string; total: number; status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled"; items: number;
@@ -38,12 +39,12 @@ interface BlogPost {
 
 // ── Initial Data ──
 const initProducts: Product[] = [
-  { id: "P001", name: "Unrefined Organic Raw Shea Butter", tagline: "The ideal size to discover the benefits of natural shea.", description: "An organic raw shea butter, rich and versatile.", size: "100g", type: "Raw", price: 12.90, oldPrice: 14.90, stock: 120, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Best Seller", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"], rating: 4.9, reviews: 248 },
-  { id: "P002", name: "Unrefined Organic Raw Shea Butter", tagline: "The essential natural care for the whole family.", description: "Generous size for regular use.", size: "250g", type: "Raw", price: 24.90, oldPrice: 28.90, stock: 80, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Most Popular", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.95, reviews: 412 },
-  { id: "P003", name: "Unrefined Organic Raw Shea Butter", tagline: "The large economical size for regular routines.", description: "Ideal for families, frequent use or natural care enthusiasts.", size: "500g", type: "Raw", price: 42.90, oldPrice: 49.90, stock: 45, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "Best Value", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.9, reviews: 189 },
-  { id: "P004", name: "Organic Whipped Shea Butter", tagline: "All the richness of shea in a light and airy texture.", description: "Whipped texture that melts quickly on the skin.", size: "150ml", type: "Whipped", price: 19.90, oldPrice: 22.90, stock: 90, status: "Active", image: "/images/whipped-shea-jar.jpg", badge: "New", ingredients: "Butyrospermum Parkii Butter, whipped. 100% natural, organic.", storage: "Store in a cool, dry place away from direct sunlight.", usage: ["Skin", "Hair", "Baby/Family"], rating: 4.85, reviews: 310 },
-  { id: "P005", name: "YKonline Shop Discovery Set", tagline: "The ideal set to discover or gift natural shea care.", description: "A selection of products to create a complete natural beauty routine.", size: "Set", type: "Set", price: 39.90, oldPrice: 49.90, stock: 30, status: "Active", image: "/images/shea-discovery-set.jpg", badge: "Gift Idea", ingredients: "Butyrospermum Parkii Butter. Multiple formats included.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"], rating: 5, reviews: 156 },
-  { id: "P006", name: "Family Shea Butter Pack", tagline: "The generous pack for the whole family.", description: "A generous pack combining raw and whipped shea butter.", size: "Pack", type: "Set", price: 59.90, oldPrice: 72.90, stock: 25, status: "Active", image: "/images/shea-discovery-set.jpg", badge: "Family", ingredients: "Butyrospermum Parkii Butter. Raw and whipped formats.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.95, reviews: 98 },
+  { id: "P001", name: "Unrefined Organic Raw Shea Butter", tagline: "The ideal size to discover the benefits of natural shea.", description: "An organic raw shea butter, rich and versatile.", size: "100g", type: "Raw", price: 12.90, oldPrice: 14.90, stock: 120, status: "Active", image: "/images/raw-shea-jar.jpg", gallery: [], badge: "Best Seller", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"], rating: 4.9, reviews: 248 },
+  { id: "P002", name: "Unrefined Organic Raw Shea Butter", tagline: "The essential natural care for the whole family.", description: "Generous size for regular use.", size: "250g", type: "Raw", price: 24.90, oldPrice: 28.90, stock: 80, status: "Active", image: "/images/raw-shea-jar.jpg", gallery: [], badge: "Most Popular", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.95, reviews: 412 },
+  { id: "P003", name: "Unrefined Organic Raw Shea Butter", tagline: "The large economical size for regular routines.", description: "Ideal for families, frequent use or natural care enthusiasts.", size: "500g", type: "Raw", price: 42.90, oldPrice: 49.90, stock: 45, status: "Active", image: "/images/raw-shea-jar.jpg", gallery: [], badge: "Best Value", ingredients: "Butyrospermum Parkii Butter. 100% pure, unrefined, organic.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.9, reviews: 189 },
+  { id: "P004", name: "Organic Whipped Shea Butter", tagline: "All the richness of shea in a light and airy texture.", description: "Whipped texture that melts quickly on the skin.", size: "150ml", type: "Whipped", price: 19.90, oldPrice: 22.90, stock: 90, status: "Active", image: "/images/whipped-shea-jar.jpg", gallery: [], badge: "New", ingredients: "Butyrospermum Parkii Butter, whipped. 100% natural, organic.", storage: "Store in a cool, dry place away from direct sunlight.", usage: ["Skin", "Hair", "Baby/Family"], rating: 4.85, reviews: 310 },
+  { id: "P005", name: "YKonline Shop Discovery Set", tagline: "The ideal set to discover or gift natural shea care.", description: "A selection of products to create a complete natural beauty routine.", size: "Set", type: "Set", price: 39.90, oldPrice: 49.90, stock: 30, status: "Active", image: "/images/shea-discovery-set.jpg", gallery: [], badge: "Gift Idea", ingredients: "Butyrospermum Parkii Butter. Multiple formats included.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family"], rating: 5, reviews: 156 },
+  { id: "P006", name: "Family Shea Butter Pack", tagline: "The generous pack for the whole family.", description: "A generous pack combining raw and whipped shea butter.", size: "Pack", type: "Set", price: 59.90, oldPrice: 72.90, stock: 25, status: "Active", image: "/images/shea-discovery-set.jpg", gallery: [], badge: "Family", ingredients: "Butyrospermum Parkii Butter. Raw and whipped formats.", storage: "Store in a dry place, away from heat and direct light.", usage: ["Skin", "Hair", "Baby/Family", "Massage"], rating: 4.95, reviews: 98 },
 ];
 
 const initOrders: Order[] = [
@@ -201,7 +202,7 @@ export default function Admin() {
       setProducts(storeProducts.map(p => ({
         id: p.id, name: p.name, tagline: p.tagline, description: p.description,
         size: p.size, type: p.type, price: p.price, oldPrice: p.oldPrice ?? 0,
-        stock: p.stock, status: "Active" as const, image: p.image, badge: p.badge ?? "",
+        stock: p.stock, status: "Active" as const, image: p.image, gallery: p.gallery?.filter((url) => url !== p.image) ?? [], badge: p.badge ?? "",
         ingredients: p.ingredients, storage: p.storage, usage: p.usage,
         rating: p.rating, reviews: p.reviews,
       })));
@@ -238,7 +239,7 @@ export default function Admin() {
     type: p.type as StoreProduct["type"],
     usage: p.usage,
     image: p.image,
-    gallery: [p.image],
+    gallery: [p.image, ...p.gallery.filter(Boolean)].filter((url, i, arr) => arr.indexOf(url) === i),
   rating: p.rating ?? 0,
     reviews: p.reviews ?? 0,
     stock: p.stock,
@@ -259,7 +260,8 @@ export default function Admin() {
 
   const saveProduct = async (p: Product) => {
     const product = { ...p, id: p.id || generateProductId(p.name, p.size) };
-    const result = await upsertProduct(adminToStoreProduct(product));
+    const isNew = !products.find(x => x.id === product.id);
+    const result = await upsertProduct(adminToStoreProduct(product), isNew);
     if (result.error) { alert(result.error); return; }
     if (products.find(x => x.id === product.id)) {
       setProducts(prev => prev.map(x => x.id === product.id ? product : x));
@@ -835,10 +837,71 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
   );
 }
 
+function ProductImageField({
+  label,
+  required,
+  value,
+  onChange,
+  productId,
+  slot,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (url: string) => void;
+  productId: string;
+  slot: number;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputCls = "w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-green focus:bg-white text-sm";
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const result = await uploadProductImage(file, productId || "new-product", slot);
+    setUploading(false);
+    if ("error" in result) alert(result.error);
+    else onChange(result.url);
+    e.target.value = "";
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-bold text-gray-700 mb-1">{label}{required ? " *" : ""}</label>
+      <div className="flex flex-col sm:flex-row gap-3">
+        {value ? (
+          <img src={value} alt="Preview" className="h-20 w-20 rounded-xl object-cover border border-gray-200 shrink-0" />
+        ) : (
+          <div className="h-20 w-20 rounded-xl border border-dashed border-gray-300 bg-gray-50 shrink-0" />
+        )}
+        <div className="flex-1 space-y-2">
+          <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-green bg-green-light/20 text-green font-semibold text-sm cursor-pointer hover:bg-green-light/40 transition-colors">
+            {uploading ? "Uploading..." : "Upload from device"}
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleFile} disabled={uploading} />
+          </label>
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Or paste image URL"
+            className={inputCls}
+            required={required && !value}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (p: Product) => void; onClose: () => void }) {
   const allUsages = ["Skin", "Hair", "Baby/Family", "Massage"];
-  const defaultProduct: Product = { id: `P${String(Date.now()).slice(-4)}`, name: "", tagline: "", description: "", size: "", type: "Raw", price: 0, oldPrice: 0, stock: 0, status: "Active", image: "/images/raw-shea-jar.jpg", badge: "", ingredients: "", storage: "Store in a dry place, away from heat and direct light.", usage: [], rating: 0, reviews: 0 };
-  const [form, setForm] = useState<Product>(product || defaultProduct);
+  const defaultProduct: Product = { id: `P${String(Date.now()).slice(-4)}`, name: "", tagline: "", description: "", size: "", type: "Raw", price: 0, oldPrice: 0, stock: 0, status: "Active", image: "", gallery: ["", "", ""], badge: "", ingredients: "", storage: "Store in a dry place, away from heat and direct light.", usage: [], rating: 0, reviews: 0 };
+  const [form, setForm] = useState<Product>(() => {
+    if (!product) return defaultProduct;
+    const extra = product.gallery?.length ? [...product.gallery] : ["", "", ""];
+    while (extra.length < 3) extra.push("");
+    return { ...product, gallery: extra.slice(0, 3) };
+  });
   const upd = (k: keyof Product, v: any) => setForm(f => ({ ...f, [k]: v }));
   const toggleUsage = (u: string) => {
     const current = form.usage;
@@ -849,7 +912,7 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
     <Overlay onClose={onClose}>
       <h2 className="font-display text-2xl font-bold mb-1">{product ? "Edit Product" : "Add New Product"}</h2>
       <p className="text-sm text-gray-500 mb-6">{product ? "Update the product details below." : "Fill in all the details to add a new product."}</p>
-      <form onSubmit={e => { e.preventDefault(); onSave(form); }} className="space-y-5">
+      <form onSubmit={e => { e.preventDefault(); if (!form.image) { alert("Please add a main product image."); return; } onSave(form); }} className="space-y-5">
         {/* Name */}
         <div>
           <label className="block text-sm font-bold text-gray-700 mb-1">Product Name *</label>
@@ -897,11 +960,31 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
             <input required type="number" min="0" value={form.stock || ""} onChange={e => upd("stock", parseInt(e.target.value) || 0)} className={inputCls} />
           </div>
         </div>
-        {/* Image URL */}
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">Product Image URL *</label>
-          <input required value={form.image} onChange={e => upd("image", e.target.value)} placeholder="https://... or /images/product.jpg" className={inputCls} />
-          {form.image && <img src={form.image} alt="Preview" className="mt-2 h-20 w-20 rounded-xl object-cover border border-gray-200" />}
+        {/* Images */}
+        <ProductImageField
+          label="Main product image"
+          required
+          value={form.image}
+          onChange={(url) => upd("image", url)}
+          productId={form.id}
+          slot={0}
+        />
+        <div className="space-y-3">
+          <p className="text-sm font-bold text-gray-700">Additional images (optional, up to 3)</p>
+          {form.gallery.map((url, index) => (
+            <ProductImageField
+              key={index}
+              label={`Image ${index + 2}`}
+              value={url}
+              onChange={(v) => setForm((f) => {
+                const gallery = [...f.gallery];
+                gallery[index] = v;
+                return { ...f, gallery };
+              })}
+              productId={form.id}
+              slot={index + 1}
+            />
+          ))}
         </div>
         {/* Usage */}
         <div>

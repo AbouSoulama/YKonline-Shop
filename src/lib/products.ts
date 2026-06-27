@@ -23,9 +23,14 @@ interface ProductRow {
   storage: string | null;
   benefits: string[] | null;
   how_to_use: { area: string; method: string }[] | null;
+  created_at?: string | null;
 }
 
-export function mapProductRow(row: ProductRow): Product {
+interface ProductRowWithDate extends ProductRow {
+  created_at?: string | null;
+}
+
+export function mapProductRow(row: ProductRowWithDate): Product {
   return {
     id: row.id,
     name: row.name,
@@ -47,6 +52,7 @@ export function mapProductRow(row: ProductRow): Product {
     storage: row.storage ?? "",
     benefits: row.benefits ?? [],
     howToUse: row.how_to_use ?? [],
+    createdAt: row.created_at ?? undefined,
   };
 }
 
@@ -80,10 +86,13 @@ export function generateProductId(name: string, size: string): string {
   return base || `product-${Date.now()}`;
 }
 
-export async function upsertProduct(product: Product): Promise<{ success: boolean; error?: string }> {
+export async function upsertProduct(product: Product, isNew = false): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured) return { success: false, error: "Database not configured." };
 
-  const { error } = await supabase.from("products").upsert(rowFromProduct(product));
+  const row = rowFromProduct(product) as Record<string, unknown>;
+  if (isNew) row.created_at = new Date().toISOString();
+
+  const { error } = await supabase.from("products").upsert(row);
   return error ? { success: false, error: error.message } : { success: true };
 }
 

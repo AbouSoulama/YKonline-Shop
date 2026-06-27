@@ -229,15 +229,15 @@ async function invokeNotifyOrderApi(orderId: string, type: OrderNotifyType): Pro
 export async function notifyOrderPlaced(orderId: string, type: OrderNotifyType = "created"): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured) return { success: false, error: "Database not configured." };
 
-  const { data, error } = await supabase.functions.invoke("notify-order", { body: { orderId, type } });
+  // Vercel API first (reliable when RESEND keys are on Vercel)
+  const apiResult = await invokeNotifyOrderApi(orderId, type);
+  if (apiResult.success) return { success: true };
 
+  const { data, error } = await supabase.functions.invoke("notify-order", { body: { orderId, type } });
   if (!error && data?.success) return { success: true };
 
   const edgeError = error?.message || (data?.error as string) || (data?.errors as string[])?.join("; ");
-  const fallback = await invokeNotifyOrderApi(orderId, type);
-  if (fallback.success) return { success: true };
-
-  return { success: false, error: edgeError || fallback.error || "Unable to send order emails." };
+  return { success: false, error: apiResult.error || edgeError || "Unable to send order emails." };
 }
 
 export async function validateCartStock(items: CartItem[]): Promise<string | null> {
