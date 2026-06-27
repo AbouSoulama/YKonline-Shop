@@ -24,7 +24,9 @@ interface Product {
   id: string; name: string; tagline: string; description: string; size: string; type: string; price: number; oldPrice: number; stock: number; status: "Active" | "Draft"; image: string; gallery: string[]; badge: string; ingredients: string; storage: string; usage: string[]; rating: number; reviews: number;
 }
 interface Order {
-  dbId: string; id: string; customer: string; email: string; date: string; total: number; status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled"; items: number;
+  dbId: string; id: string; customer: string; email: string; date: string; total: number; status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled"; itemCount: number;
+  shippingAddress?: { address: string; city: string; country: string; phone: string };
+  lineItems: Array<{ name: string; quantity: number; price: number; size?: string }>;
 }
 interface Customer {
   id: string; name: string; email: string; orders: number; spent: number; joined: string;
@@ -48,12 +50,12 @@ const initProducts: Product[] = [
 ];
 
 const initOrders: Order[] = [
-  { id: "YK-2026-1089", customer: "Sarah Johnson", email: "sarah@mail.com", date: "Jan 15, 2026", total: 67.80, status: "Pending", items: 3 },
-  { id: "YK-2026-1088", customer: "Aminata Diallo", email: "aminata@mail.com", date: "Jan 14, 2026", total: 42.90, status: "Processing", items: 1 },
-  { id: "YK-2026-1087", customer: "Claire Martin", email: "claire@mail.com", date: "Jan 13, 2026", total: 24.90, status: "Shipped", items: 1 },
-  { id: "YK-2026-1086", customer: "Sophie Laurent", email: "sophie@mail.com", date: "Jan 12, 2026", total: 99.70, status: "Delivered", items: 4 },
-  { id: "YK-2026-1085", customer: "Mariam Keita", email: "mariam@mail.com", date: "Jan 11, 2026", total: 19.90, status: "Delivered", items: 1 },
-  { id: "YK-2026-1084", customer: "Emma Wilson", email: "emma@mail.com", date: "Jan 10, 2026", total: 59.90, status: "Cancelled", items: 2 },
+  { id: "YK-2026-1089", dbId: "1", customer: "Sarah Johnson", email: "sarah@mail.com", date: "Jan 15, 2026", total: 67.80, status: "Pending", itemCount: 3, lineItems: [], shippingAddress: { address: "123 Main St", city: "Washington", country: "United States", phone: "+1 555 0100" } },
+  { id: "YK-2026-1088", dbId: "2", customer: "Aminata Diallo", email: "aminata@mail.com", date: "Jan 14, 2026", total: 42.90, status: "Processing", itemCount: 1, lineItems: [], shippingAddress: { address: "456 Oak Ave", city: "Baltimore", country: "United States", phone: "+1 555 0101" } },
+  { id: "YK-2026-1087", dbId: "3", customer: "Claire Martin", email: "claire@mail.com", date: "Jan 13, 2026", total: 24.90, status: "Shipped", itemCount: 1, lineItems: [], shippingAddress: { address: "789 Pine Rd", city: "Alexandria", country: "United States", phone: "+1 555 0102" } },
+  { id: "YK-2026-1086", dbId: "4", customer: "Sophie Laurent", email: "sophie@mail.com", date: "Jan 12, 2026", total: 99.70, status: "Delivered", itemCount: 4, lineItems: [], shippingAddress: { address: "321 Elm St", city: "Richmond", country: "United States", phone: "+1 555 0103" } },
+  { id: "YK-2026-1085", dbId: "5", customer: "Mariam Keita", email: "mariam@mail.com", date: "Jan 11, 2026", total: 19.90, status: "Delivered", itemCount: 1, lineItems: [], shippingAddress: { address: "654 Cedar Ln", city: "Fredericksburg", country: "United States", phone: "+1 555 0104" } },
+  { id: "YK-2026-1084", dbId: "6", customer: "Emma Wilson", email: "emma@mail.com", date: "Jan 10, 2026", total: 59.90, status: "Cancelled", itemCount: 2, lineItems: [], shippingAddress: { address: "987 Birch Dr", city: "Annapolis", country: "United States", phone: "+1 555 0105" } },
 ];
 
 const initCustomers: Customer[] = [
@@ -155,7 +157,9 @@ export default function Admin() {
       date: o.createdAt,
       total: o.total,
       status: mapOrderStatus(o.status),
-      items: o.items.length,
+      itemCount: o.items.length,
+      lineItems: o.items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price, size: i.size })),
+      shippingAddress: o.shippingAddress,
     })));
 
     setBlog(blogData.map(b => ({
@@ -641,15 +645,40 @@ export default function Admin() {
                   </button>
                   {expandedOrder === o.id && (
                     <div className="border-t border-gray-50 p-5 bg-gray-50/30 fade-in">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm">
                         <div><p className="text-gray-400 text-xs mb-1">Customer</p><p className="font-semibold">{o.customer}</p><p className="text-xs text-gray-500">{o.email}</p></div>
-                        <div><p className="text-gray-400 text-xs mb-1">Items</p><p className="font-semibold">{o.items} product(s)</p></div>
+                        <div>
+                          <p className="text-gray-400 text-xs mb-1">Shipping address</p>
+                          {o.shippingAddress ? (
+                            <div className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">
+                              <p className="font-semibold">{o.shippingAddress.address}</p>
+                              <p>{o.shippingAddress.city}, {o.shippingAddress.country}</p>
+                              <p className="text-xs text-gray-500 mt-1">{o.shippingAddress.phone}</p>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500">—</p>
+                          )}
+                        </div>
+                        <div><p className="text-gray-400 text-xs mb-1">Items</p><p className="font-semibold">{o.itemCount} product(s)</p></div>
                         <div><p className="text-gray-400 text-xs mb-1">Update Status</p>
                           <select value={o.status} onChange={e => updateOrderStatus(o.dbId, e.target.value as Order["status"])} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold focus:outline-none focus:border-green">
                             {["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map(s => <option key={s}>{s}</option>)}
                           </select>
                         </div>
                       </div>
+                      {o.lineItems.length > 0 && (
+                        <div className="rounded-xl bg-white border border-gray-100 p-4 text-sm">
+                          <p className="text-gray-400 text-xs mb-2 uppercase font-bold">Order items</p>
+                          <ul className="space-y-1">
+                            {o.lineItems.map((item, idx) => (
+                              <li key={idx} className="flex justify-between gap-2">
+                                <span>{item.name}{item.size ? ` (${item.size})` : ""} × {item.quantity}</span>
+                                <span className="font-semibold text-green shrink-0">{fmt(item.price * item.quantity)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

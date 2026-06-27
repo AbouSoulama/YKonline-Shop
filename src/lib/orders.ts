@@ -31,6 +31,7 @@ export interface Order {
   status: string;
   paymentMethod: string;
   items: CartItem[];
+  shippingAddress?: OrderPayload["shippingAddress"];
   createdAt: string;
 }
 
@@ -127,6 +128,7 @@ export async function fetchOrders(): Promise<Order[]> {
     status: row.status ?? "pending",
     paymentMethod: row.payment_method ?? "",
     items: row.items as CartItem[],
+    shippingAddress: row.shipping_address as OrderPayload["shippingAddress"] | undefined,
     createdAt: new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
   }));
 }
@@ -153,6 +155,7 @@ function mapRowToOrder(row: Record<string, unknown>): Order {
     status: (row.status ?? "pending") as string,
     paymentMethod: (row.payment_method ?? row.paymentMethod ?? "") as string,
     items: row.items as CartItem[],
+    shippingAddress: (row.shipping_address ?? row.shippingAddress) as OrderPayload["shippingAddress"] | undefined,
     createdAt: new Date(row.created_at as string).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
   };
 }

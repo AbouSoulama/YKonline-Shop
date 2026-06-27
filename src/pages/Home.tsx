@@ -26,7 +26,7 @@ const usages = [
 const commitments = [
   "Carefully selected products",
   "Simple, transparent ingredients",
-  "Fast shipping worldwide",
+  "Fast shipping across the USA",
   "Available customer service",
   "Natural beauty advice",
   "Secure online store",
@@ -35,7 +35,7 @@ const commitments = [
 export default function Home() {
   usePageMeta({
     title: "YKonline Shop - Natural Organic Premium Shea Butter",
-    description: "Premium organic shea butter to naturally nourish your skin and hair. 100% natural, fast shipping worldwide.",
+    description: "Premium organic shea butter shipped across the United States. Based in Maryland, USA — 100% natural skin and hair care with fast US delivery.",
     path: "/",
   });
 

@@ -16,6 +16,22 @@ function formatItems(items) {
     .join("\n");
 }
 
+function formatShippingAddress(addr) {
+  if (!addr || typeof addr !== "object") return "—";
+  const lines = [
+    addr.address?.trim(),
+    [addr.city?.trim(), addr.country?.trim()].filter(Boolean).join(", "),
+    addr.phone?.trim() ? `Phone: ${addr.phone.trim()}` : "",
+  ].filter(Boolean);
+  return lines.length ? lines.join("\n") : "—";
+}
+
+function formatShippingAddressHtml(addr) {
+  const text = formatShippingAddress(addr);
+  if (text === "—") return "<p style=\"margin:0;color:#666\">—</p>";
+  return `<p style="margin:0;line-height:1.6;color:#333">${text.split("\n").map((l) => l.replace(/</g, "&lt;")).join("<br/>")}</p>`;
+}
+
 function orderEmailHtml(order, title, intro) {
   const items = order.items ?? [];
   const itemsHtml = items
@@ -29,6 +45,10 @@ function orderEmailHtml(order, title, intro) {
       <p>${intro}</p>
       <p style="font-size:18px;font-weight:bold;color:#0B6623">Order #${order.order_number}</p>
       <table style="width:100%;border-top:1px solid #eee;margin:16px 0">${itemsHtml}</table>
+      <div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:bold;color:#0B6623;text-transform:uppercase">Shipping address</p>
+        ${formatShippingAddressHtml(order.shipping_address)}
+      </div>
       <p>Shipping: $${Number(order.shipping_cost ?? 0).toFixed(2)}</p>
       <p style="font-size:16px;font-weight:bold">Total: $${Number(order.total).toFixed(2)}</p>
       <p style="color:#666;font-size:13px">Questions? Reply to contact@ykonline.shop</p>
@@ -49,7 +69,7 @@ function buildWhatsAppMessage(order, type) {
     `Order #${order.order_number}`,
     `Customer: ${order.customer_name}`,
     `Email: ${order.customer_email}`,
-    `Phone: ${order.shipping_address?.phone ?? "—"}`,
+    `Ship to:\n${formatShippingAddress(order.shipping_address)}`,
     "",
     formatItems(items),
     "",
@@ -185,6 +205,8 @@ export default async function handler(req, res) {
           <h2 style="color:#0B6623">💰 Payment confirmed — new order!</h2>
           <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
           <p>Phone: ${order.shipping_address?.phone ?? "—"}</p>
+          <p><strong>Shipping address:</strong></p>
+          <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${formatShippingAddress(order.shipping_address)}</pre>
           <p style="font-size:18px;font-weight:bold;color:#FF7900">Total: $${Number(order.total).toFixed(2)}</p>
           <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
           <p style="margin-top:16px"><a href="https://ykonline.shop/admin">Open admin dashboard</a></p>

@@ -3,6 +3,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   ADMIN_EMAIL,
   formatItems,
+  formatShippingAddress,
+  formatShippingAddressHtml,
   orderEmailHtml,
   sendResendEmail,
 } from "../_shared/resend.ts";
@@ -59,6 +61,8 @@ Deno.serve(async (req) => {
           <h2 style="color:#0B6623">💰 Payment confirmed — new order!</h2>
           <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
           <p>Phone: ${(order.shipping_address as { phone?: string })?.phone ?? "—"}</p>
+          <p><strong>Shipping address:</strong></p>
+          <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${formatShippingAddress(order.shipping_address)}</pre>
           <p style="font-size:18px;font-weight:bold;color:#FF7900">Total: $${Number(order.total).toFixed(2)}</p>
           <p>Status: ${order.status}</p>
           <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
@@ -126,6 +130,8 @@ Deno.serve(async (req) => {
         `<div style="font-family:Arial,sans-serif;padding:24px">
           <h2 style="color:#0B6623">New order placed (awaiting payment)</h2>
           <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
+          <p><strong>Shipping address:</strong></p>
+          ${formatShippingAddressHtml(order.shipping_address)}
           <p>Total: $${Number(order.total).toFixed(2)}</p>
           <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
         </div>`,

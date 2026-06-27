@@ -1,3 +1,5 @@
+import { formatShippingAddress } from "./resend.ts";
+
 const ADMIN_WHATSAPP = Deno.env.get("ADMIN_WHATSAPP") || "13012669830";
 
 function normalizePhone(phone: string): string {
@@ -86,7 +88,7 @@ export function buildOrderWhatsAppMessage(
     `Order #${order.order_number}`,
     `Customer: ${order.customer_name}`,
     `Email: ${order.customer_email}`,
-    `Phone: ${(order.shipping_address as { phone?: string })?.phone ?? "—"}`,
+    `Ship to:\n${formatShippingAddress(order.shipping_address)}`,
     "",
     formatItems(items),
     "",

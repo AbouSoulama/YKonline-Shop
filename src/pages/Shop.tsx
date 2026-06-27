@@ -19,7 +19,7 @@ const sorts = [
 export default function Shop() {
   usePageMeta({
     title: "Shop Organic Shea Butter",
-    description: "Browse our collection of premium organic raw, whipped shea butter and discovery sets. Natural skin and hair care.",
+    description: "Browse premium organic shea butter shipped across the United States. Raw, whipped shea butter and discovery sets — natural US skin and hair care.",
     path: "/shop",
   });
 

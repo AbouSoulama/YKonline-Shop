@@ -9,9 +9,9 @@ export interface PageMeta {
   noIndex?: boolean;
 }
 
-const DEFAULT_TITLE = "YKonline Shop - Natural Organic Premium Shea Butter";
+const DEFAULT_TITLE = "YKonline Shop - Natural Organic Premium Shea Butter | USA";
 const DEFAULT_DESCRIPTION =
-  "YKonline Shop - Premium organic shea butter to naturally nourish your skin and hair. 100% natural, carefully selected, fast shipping.";
+  "YKonline Shop — Premium organic shea butter shipped across the United States. Based in Maryland, USA. 100% natural skin and hair care with fast US delivery.";
 const DEFAULT_IMAGE =
   "https://sori-mobile-tire.com/wp-content/uploads/2026/06/YKONLINE-SHOP-LOGO.jpeg";
 
@@ -51,6 +51,9 @@ export function applyPageMeta(meta: PageMeta) {
   setMetaTag("name", "twitter:title", title);
   setMetaTag("name", "twitter:description", description);
   setMetaTag("name", "twitter:image", image);
+  setMetaTag("property", "og:locale", "en_US");
+  setMetaTag("name", "geo.region", "US-MD");
+  setMetaTag("name", "geo.placename", "Waldorf, Maryland, United States");
   setCanonical(url);
 
   if (meta.noIndex) {

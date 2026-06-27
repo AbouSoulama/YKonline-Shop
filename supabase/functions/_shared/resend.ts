@@ -8,6 +8,23 @@ export function formatItems(items: Array<{ name: string; quantity: number; price
     .join("\n");
 }
 
+export function formatShippingAddress(addr: unknown): string {
+  if (!addr || typeof addr !== "object") return "—";
+  const a = addr as { address?: string; city?: string; country?: string; phone?: string };
+  const lines = [
+    a.address?.trim(),
+    [a.city?.trim(), a.country?.trim()].filter(Boolean).join(", "),
+    a.phone?.trim() ? `Phone: ${a.phone.trim()}` : "",
+  ].filter(Boolean);
+  return lines.length ? lines.join("\n") : "—";
+}
+
+export function formatShippingAddressHtml(addr: unknown): string {
+  const text = formatShippingAddress(addr);
+  if (text === "—") return "<p style=\"margin:0;color:#666\">—</p>";
+  return `<p style="margin:0;line-height:1.6;color:#333">${text.split("\n").map((l) => l.replace(/</g, "&lt;")).join("<br/>")}</p>`;
+}
+
 export function orderEmailHtml(order: Record<string, unknown>, title: string, intro: string) {
   const items = (order.items as Array<{ name: string; quantity: number; price: number }>) ?? [];
   const itemsHtml = items
@@ -21,6 +38,10 @@ export function orderEmailHtml(order: Record<string, unknown>, title: string, in
       <p>${intro}</p>
       <p style="font-size:18px;font-weight:bold;color:#0B6623">Order #${order.order_number}</p>
       <table style="width:100%;border-top:1px solid #eee;margin:16px 0">${itemsHtml}</table>
+      <div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:bold;color:#0B6623;text-transform:uppercase">Shipping address</p>
+        ${formatShippingAddressHtml(order.shipping_address)}
+      </div>
       <p>Shipping: $${Number(order.shipping_cost ?? 0).toFixed(2)}</p>
       <p style="font-size:16px;font-weight:bold">Total: $${Number(order.total).toFixed(2)}</p>
       <p style="color:#666;font-size:13px">Questions? Reply to contact@ykonline.shop</p>
