@@ -4,7 +4,7 @@ import {
   BarChart3, Package, Users, ShoppingCart, Tag, FileText, Star, Settings, LogOut,
   Plus, Edit, Trash2, Search, Download, Eye, ChevronDown, TrendingUp,
   DollarSign, ShoppingBag, UserCheck, Check, AlertCircle,
-  Leaf, Menu, X
+  Leaf, Menu, X, ExternalLink
 } from "lucide-react";
 import { SITE_EMAIL } from "../constants/site";
 import { useAuth, confirmLogout } from "../context/AuthContext";
@@ -424,7 +424,14 @@ export default function Admin() {
             <p className="text-sm font-semibold truncate">Administrator</p>
           </div>
         </div>
-        <button onClick={handleSignOut} className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all">
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-white/10 text-white hover:bg-white/20 transition-all"
+        >
+          <ExternalLink size={18} /> Back to site
+        </button>
+        <button onClick={handleSignOut} className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all">
           <LogOut size={18} /> Sign out
         </button>
       </div>
