@@ -1,10 +1,17 @@
 import { Mail, MapPin, MessageCircle, Clock, Send, AlertCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
-import { SITE_EMAIL } from "../constants/site";
+import { SITE_EMAIL, STORE_ADDRESS, ADMIN_WHATSAPP } from "../constants/site";
 import SocialLinks from "../components/SocialLinks";
 import { submitContactForm } from "../lib/contact";
+import { usePageMeta } from "../lib/seo";
 
 export default function Contact() {
+  usePageMeta({
+    title: "Contact Us",
+    description: "Contact YKonline Shop in Waldorf, Maryland, USA. Premium shea butter shipped to the United States and Europe. Email or WhatsApp support.",
+    path: "/contact",
+  });
+
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,7 +52,7 @@ export default function Contact() {
       <section className="container-page py-16 grid md:grid-cols-3 gap-6">
         {[
           { icon: Mail, title: "Email", value: SITE_EMAIL, desc: "Response within 24 hours", href: `mailto:${SITE_EMAIL}` },
-          { icon: MessageCircle, title: "WhatsApp", value: "Chat with us", desc: "Fast and friendly support", link: "https://wa.me/13012669830" },
+          { icon: MessageCircle, title: "WhatsApp", value: "Chat with us", desc: "Fast and friendly support", link: `https://wa.me/${ADMIN_WHATSAPP}` },
           { icon: Clock, title: "Hours", value: "Mon - Sat, 9am - 6pm", desc: "Closed on Sundays" },
         ].map((c) => (
           <div key={c.title} className="bg-white rounded-3xl p-8 card-shadow border border-cream text-center">
@@ -121,14 +128,15 @@ export default function Contact() {
             <MessageCircle size={36} className="mb-4 text-orange" />
             <h3 className="font-display text-2xl font-bold mb-3">Chat with us on WhatsApp</h3>
             <p className="text-white/90 mb-6">For a quick answer, write to us directly on WhatsApp. Our team responds in just a few minutes during business hours.</p>
-            <a href="https://wa.me/13012669830?text=Hello%20YKonline%20Shop" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-orange hover:bg-orange-dark text-white font-semibold px-6 py-3 rounded-full transition-colors">
+            <a href={`https://wa.me/${ADMIN_WHATSAPP}?text=Hello%20YKonline%20Shop`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-orange hover:bg-orange-dark text-white font-semibold px-6 py-3 rounded-full transition-colors">
               Open WhatsApp chat
             </a>
           </div>
           <div className="bg-cream/40 rounded-3xl p-8">
             <MapPin size={30} className="text-green mb-3" />
             <h3 className="font-display font-semibold text-xl mb-2">Our location</h3>
-            <p className="text-gray-600">YKonline Shop is an online store that delivers worldwide. Our shea butter is carefully selected and packaged with love for you.</p>
+            <p className="text-gray-600 font-semibold mb-2">{STORE_ADDRESS}</p>
+            <p className="text-gray-600">We ship premium organic shea butter across the United States and Europe. Carefully selected and packaged for you.</p>
           </div>
           <div className="bg-white rounded-3xl p-8 border border-cream card-shadow">
             <h3 className="font-display font-semibold text-xl mb-3">Follow us</h3>

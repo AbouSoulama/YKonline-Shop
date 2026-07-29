@@ -494,7 +494,7 @@ export default function Account() {
     <div className="fade-in container-page py-16 max-w-xl">
       <div className="text-center mb-8">
         <Link to="/">
-          <img src="https://sori-mobile-tire.com/wp-content/uploads/2026/06/YKONLINE-SHOP-LOGO.jpeg" alt="YKonline Shop" className="h-20 w-20 mx-auto mb-4 rounded-2xl object-cover shadow-md" />
+          <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-20 w-20 mx-auto mb-4 rounded-2xl object-cover shadow-md" />
         </Link>
         <h1 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-2">{mode === "login" ? "Welcome back" : "Create your account"}</h1>
         <p className="text-gray-600">{mode === "login" ? "Log in to access your account" : "Join the YKonline Shop community"}</p>

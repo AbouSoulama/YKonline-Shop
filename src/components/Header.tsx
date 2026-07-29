@@ -2,6 +2,7 @@ import { ShoppingCart, Search, User, Menu, X, MessageCircle, Truck, ShieldCheck,
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { ADMIN_WHATSAPP } from "../constants/site";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -49,7 +50,7 @@ export default function Header() {
         </button>
 
         <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="YKonline Shop home">
-          <img src="https://sori-mobile-tire.com/wp-content/uploads/2026/06/YKONLINE-SHOP-LOGO.jpeg" alt="YKonline Shop" className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover shadow-sm" />
+          <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover shadow-sm" />
           <span className="hidden sm:block leading-none">
             <span className="block font-display text-xl font-extrabold tracking-[-0.04em]"><span className="text-green">YKonline</span> <span className="text-orange">Shop</span></span>
             <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-[0.22em] text-green/70">Shop smart, live better</span>
@@ -83,7 +84,7 @@ export default function Header() {
             <User size={22} />
           </Link>
           <a
-            href="https://wa.me/13012669830"
+            href={`https://wa.me/${ADMIN_WHATSAPP}`}
             target="_blank"
             rel="noreferrer"
             className="hidden md:inline-flex items-center gap-2 bg-green-light text-green hover:bg-green hover:text-white transition-colors rounded-full px-4 py-2 text-sm font-bold"

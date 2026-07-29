@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Truck, Check, ChevronLeft, Lock, Loader2, MapPin, AlertCircle, CreditCard } from "lucide-react";
-import { useCart, formatPrice } from "../context/CartContext";
+import { useCart, formatPrice, calcTax, calcOrderTotal } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useProducts } from "../context/ProductsContext";
 import { calculateShipping, STORE_ADDRESS } from "../lib/shipping";
@@ -46,7 +46,9 @@ export default function Checkout() {
   const isUS = isUnitedStates(form.country);
 
   const activeShipping = shippingMethod === "express" && quote ? quote.expressCost : (quote?.cost ?? shipping);
-  const orderTotal = subtotal - discount + activeShipping;
+  const itemsNet = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+  const tax = calcTax(subtotal, discount);
+  const orderTotal = calcOrderTotal(subtotal, discount, activeShipping);
 
   useEffect(() => {
     if (step !== 3 || !orderInfo || paymentChoice !== "card") {
@@ -176,7 +178,7 @@ export default function Checkout() {
 
       const cost = shippingMethod === "express" && quote ? quote.expressCost : (quote?.cost ?? 0);
       setShippingCost(cost, quote?.distanceKm ?? 0);
-      const finalTotal = subtotal - discount + cost;
+      const finalTotal = calcOrderTotal(subtotal, discount, cost);
 
       setLoading(true);
       const order = await createOrder(buildOrderPayload(cost, finalTotal));
@@ -228,7 +230,7 @@ export default function Checkout() {
               <h2 className="font-display text-2xl font-bold mb-2">Delivery address</h2>
               <p className="text-sm text-gray-500 mb-5 flex items-start gap-2">
                 <MapPin size={16} className="text-green shrink-0 mt-0.5" />
-                US orders: flat rate $5.99 standard · $9.99 express. International: distance-based (capped).
+                US orders: flat rate $5.99 standard · $12 express. International: distance-based (capped). Tax 6%.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2"><label className="block text-sm font-semibold mb-1">Email</label><input required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-3 rounded-2xl border border-cream bg-cream/30 focus:outline-none focus:border-green" /></div>
@@ -269,12 +271,12 @@ export default function Checkout() {
               <div className="space-y-3">
                 {[
                   { id: "standard" as const, name: "Standard Shipping", time: "3-5 business days", price: quote?.cost ?? shipping },
-                  { id: "express" as const, name: "Express Shipping", time: "1-2 business days", price: quote?.expressCost ?? shipping + 5 },
+                  { id: "express" as const, name: "Express Shipping", time: "1-2 business days", price: quote?.expressCost ?? 12 },
                 ].map((m) => (
                   <label key={m.id} className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer ${shippingMethod === m.id ? "border-green bg-green-light/30" : "border-cream"}`}>
                     <input type="radio" name="shipping" checked={shippingMethod === m.id} onChange={() => {
                       setShippingMethod(m.id);
-                      const cost = m.id === "express" ? (quote?.expressCost ?? 0) : (quote?.cost ?? 0);
+                      const cost = m.id === "express" ? (quote?.expressCost ?? 12) : (quote?.cost ?? 0);
                       setShippingCost(cost, quote?.distanceKm ?? 0);
                     }} className="accent-green" />
                     <Truck className="text-green" size={22} />
@@ -452,11 +454,22 @@ export default function Checkout() {
             ))}
           </div>
           <div className="border-t border-cream pt-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span>Subtotal</span><span className="font-semibold">{formatPrice(subtotal)}</span></div>
-            {discount > 0 && <div className="flex justify-between text-green"><span>Discount ({appliedPromo?.code ?? "Promo"})</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
+            <div className="flex justify-between">
+              <span>Item</span>
+              <span className="font-semibold">{formatPrice(itemsNet)}</span>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-green text-xs">
+                <span>Includes discount ({appliedPromo?.code ?? "Promo"}): −{formatPrice(discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Shipping{shippingDistanceKm > 0 ? ` (${shippingDistanceKm} km)` : ""}</span>
               <span className="font-semibold">{activeShipping > 0 ? formatPrice(activeShipping) : "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tax (6%)</span>
+              <span className="font-semibold">{formatPrice(tax)}</span>
             </div>
             <div className="flex justify-between text-lg pt-2 border-t border-cream">
               <span className="font-display font-bold">Total</span>

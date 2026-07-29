@@ -2,6 +2,7 @@ import { Leaf, Truck, Shield, Award, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import SocialLinks from "./SocialLinks";
 import SubscribeForm from "./SubscribeForm";
+import { ADMIN_WHATSAPP } from "../constants/site";
 
 export default function Footer() {
   return (
@@ -9,14 +10,14 @@ export default function Footer() {
       <div className="container-page py-14 grid grid-cols-1 md:grid-cols-4 gap-10">
         <div>
           <div className="flex items-center gap-3 mb-5">
-            <img src="https://sori-mobile-tire.com/wp-content/uploads/2026/06/YKONLINE-SHOP-LOGO.jpeg" alt="YKonline Shop" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
+            <img src="/images/ykonline-logo.png" alt="YKonline Shop" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
             <div>
               <p className="font-display text-2xl font-extrabold tracking-[-0.04em]"><span className="text-white">YKonline</span> <span className="text-orange">Shop</span></p>
               <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/65">Shop smart, live better</p>
             </div>
           </div>
           <p className="text-white/80 text-sm leading-relaxed">
-            Premium organic shea butter, selected with care to offer your skin and hair the best of nature.
+            Premium organic shea butter from Waldorf, Maryland — shipped across the United States and Europe.
           </p>
           <SocialLinks size="sm" className="mt-4" variant="dark" />
         </div>
@@ -40,7 +41,7 @@ export default function Footer() {
             <li><Link to="/shipping" className="hover:text-orange">Shipping & Returns</Link></li>
             <li><Link to="/track-order" className="hover:text-orange">Track my order</Link></li>
             <li><Link to="/account" className="hover:text-orange">My account</Link></li>
-            <li><a href="https://wa.me/13012669830" className="hover:text-orange">WhatsApp chat</a></li>
+            <li><a href={`https://wa.me/${ADMIN_WHATSAPP}`} className="hover:text-orange">WhatsApp chat</a></li>
           </ul>
         </div>
 

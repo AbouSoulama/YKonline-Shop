@@ -1,5 +1,7 @@
 export const SITE_EMAIL = "contact@ykonline.shop";
 export const ADMIN_WHATSAPP = "13012669830";
+/** Maryland sales tax rate applied to merchandise (after discount). */
+export const TAX_RATE = 0.06;
 
 export const SOCIAL_LINKS = {
   facebook: "https://facebook.com/ykonlineshop",

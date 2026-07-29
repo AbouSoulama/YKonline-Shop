@@ -6,7 +6,7 @@ interface Coords {
 }
 
 const US_FLAT_STANDARD = 5.99;
-const US_FLAT_EXPRESS = 9.99;
+const US_FLAT_EXPRESS = 12;
 const MAX_DISTANCE_KM = 800;
 const MAX_SHIPPING_COST = 49;
 

@@ -10,7 +10,7 @@ import { SITE_EMAIL } from "../constants/site";
 import { useAuth, confirmLogout } from "../context/AuthContext";
 import { useReviews } from "../context/ReviewContext";
 import { useProducts } from "../context/ProductsContext";
-import { fetchOrders, updateOrderStatus as dbUpdateOrderStatus } from "../lib/orders";
+import { fetchOrders, updateOrderStatus as dbUpdateOrderStatus, notifyOrderPlaced } from "../lib/orders";
 import { getShippingAddressLines } from "../lib/shippingAddress";
 import { fetchAllPosts, createBlogPost, deleteBlogPost, toggleBlogPostStatus, type BlogPost as BlogPostType } from "../lib/blog";
 import { upsertProduct, deleteProduct as dbDeleteProduct, generateProductId } from "../lib/products";
@@ -687,6 +687,19 @@ export default function Admin() {
                           </ul>
                         </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const type = o.status === "Pending" ? "created" : "paid";
+                          const result = await notifyOrderPlaced(o.dbId, type);
+                          alert(result.success
+                            ? "Order alert sent to WhatsApp +1 (301) 266-9830"
+                            : `Failed to send: ${result.error ?? "unknown error"}`);
+                        }}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white px-4 py-2.5 text-sm font-semibold transition-colors"
+                      >
+                        Send to WhatsApp
+                      </button>
                     </div>
                   )}
                 </div>

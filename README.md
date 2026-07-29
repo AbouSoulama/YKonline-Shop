@@ -102,19 +102,23 @@ supabase functions deploy notify-order mark-order-paid stripe-webhook
 
 Exécutez dans Supabase → SQL Editor : `supabase/migrations/20240625_product_images_storage.sql`
 
-## SEO — cibler le marché américain (Google USA)
+## SEO — cibler le marché américain et européen (Google)
 
-Le site indique désormais **Maryland, USA** dans les métadonnées, le JSON-LD et le contenu.
+Le site indique **Waldorf, Maryland, USA** et la livraison **USA + Europe** dans les métadonnées, le JSON-LD et le contenu.
 
 **Actions manuelles importantes** (Google ne peut pas être forcé uniquement par le code) :
 
 1. **Google Search Console** ([search.google.com/search-console](https://search.google.com/search-console))
    - Ajoutez la propriété `https://ykonline.shop`
    - Soumettez le sitemap : `https://ykonline.shop/sitemap.xml`
-   - **Paramètres → Ciblage international → Pays** : sélectionnez **États-Unis**
-2. **Google Business Profile** : si une fiche existe au **Burkina Faso**, supprimez-la ou corrigez l'adresse en **Waldorf, MD 20602, USA**
-3. **Backlinks US** : inscrivez le site sur des annuaires américains (Yelp, Bing Places, Apple Maps) avec l'adresse Maryland
-4. Attendez **2 à 8 semaines** pour que Google réindexe avec le nouveau ciblage géographique
+   - **Paramètres → Ciblage international → Pays** : sélectionnez **États-Unis** (marché principal)
+   - Demandez une **réindexation** de la page d'accueil
+2. **Google Business Profile** : si une fiche existe au **Burkina Faso**, **supprimez-la** ou corrigez l'adresse en **3812 Light Arms Pl, Waldorf, MD 20602, USA** — une fiche BF explique pourquoi le site apparaît au Burkina et pas aux USA
+3. **Bing Webmaster Tools** : ajoutez aussi le site et soumettez le sitemap (utile pour les USA)
+4. **Backlinks US/EU** : inscrivez le site sur des annuaires américains (Yelp, Bing Places, Apple Maps) avec l'adresse Maryland
+5. Attendez **2 à 8 semaines** pour que Google réindexe avec le nouveau ciblage géographique
+
+> Sans corriger la fiche Google Business / le ciblage Search Console, le code SEO seul ne suffira pas à faire remonter le site aux USA.
 
 ## Déploiement Vercel
 

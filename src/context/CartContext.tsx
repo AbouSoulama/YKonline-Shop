@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode, useCallback } from "react";
 import { validatePromoCode } from "../lib/promos";
+import { TAX_RATE } from "../constants/site";
 
 export interface CartItem {
   id: string;
@@ -34,6 +35,8 @@ interface CartContextValue {
   shipping: number;
   shippingDistanceKm: number;
   setShippingCost: (cost: number, distanceKm?: number) => void;
+  /** 6% tax on merchandise after discount */
+  tax: number;
   total: number;
 }
 
@@ -41,6 +44,10 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "ykonline_cart";
 const PROMO_KEY = "ykonline_promo";
+
+function roundMoney(n: number) {
+  return Math.round(n * 100) / 100;
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -135,7 +142,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const discount = appliedPromo?.discount ?? 0;
   const shipping = items.length === 0 ? 0 : shippingCost;
-  const total = subtotal - discount + shipping;
+  const itemsAfterDiscount = Math.max(0, roundMoney(subtotal - discount));
+  const tax = items.length === 0 ? 0 : roundMoney(itemsAfterDiscount * TAX_RATE);
+  const total = items.length === 0 ? 0 : roundMoney(itemsAfterDiscount + shipping + tax);
 
   return (
     <CartContext.Provider
@@ -158,6 +167,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         shipping,
         shippingDistanceKm,
         setShippingCost,
+        tax,
         total,
       }}
     >
@@ -173,3 +183,16 @@ export function useCart() {
 }
 
 export const formatPrice = (n: number) => `$${n.toFixed(2)}`;
+
+/** Tax (6%) on merchandise after discount — keep in sync with CartContext. */
+export function calcTax(subtotal: number, discount = 0) {
+  const itemsNet = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+  return Math.round(itemsNet * TAX_RATE * 100) / 100;
+}
+
+/** Full order total: items − discount + shipping + tax. */
+export function calcOrderTotal(subtotal: number, discount: number, shipping: number) {
+  const itemsNet = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+  const tax = Math.round(itemsNet * TAX_RATE * 100) / 100;
+  return Math.round((itemsNet + shipping + tax) * 100) / 100;
+}

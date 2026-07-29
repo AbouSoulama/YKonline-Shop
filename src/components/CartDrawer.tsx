@@ -6,7 +6,7 @@ import { stockLabel } from "../lib/productDisplay";
 import { useState } from "react";
 
 export default function CartDrawer() {
-  const { items, isOpen, setIsOpen, removeItem, updateQuantity, subtotal, discount, shipping, total, promoCode, setPromoCode, appliedPromo, applyPromo, clearPromo, clearCart } = useCart();
+  const { items, isOpen, setIsOpen, removeItem, updateQuantity, subtotal, discount, shipping, tax, total, promoCode, setPromoCode, appliedPromo, applyPromo, clearPromo, clearCart } = useCart();
   const { getProductById } = useProducts();
   const [promoMsg, setPromoMsg] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
@@ -115,12 +115,13 @@ export default function CartDrawer() {
             </div>
 
             <div className="border-t border-cream p-5 space-y-2 bg-cream/30">
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Subtotal</span><span className="font-semibold">{formatPrice(subtotal)}</span></div>
-              {discount > 0 && <div className="flex justify-between text-sm text-green"><span>Discount ({appliedPromo?.code})</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Shipping</span><span className="font-semibold text-gray-400">At checkout</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-600">Item</span><span className="font-semibold">{formatPrice(Math.max(0, subtotal - discount))}</span></div>
+              {discount > 0 && <div className="flex justify-between text-xs text-green"><span>Discount ({appliedPromo?.code})</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
+              <div className="flex justify-between text-sm"><span className="text-gray-600">Shipping</span><span className="font-semibold text-gray-400">{shipping > 0 ? formatPrice(shipping) : "At checkout"}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-600">Tax (6%)</span><span className="font-semibold">{formatPrice(tax)}</span></div>
               <div className="flex justify-between text-lg pt-2 border-t border-cream">
-                <span className="font-display font-semibold">Subtotal</span>
-                <span className="font-display font-bold text-green">{formatPrice(subtotal - discount)}</span>
+                <span className="font-display font-semibold">Total</span>
+                <span className="font-display font-bold text-green">{formatPrice(total)}</span>
               </div>
               <Link to="/checkout" onClick={() => setIsOpen(false)} className="btn-primary w-full mt-3">
                 Checkout

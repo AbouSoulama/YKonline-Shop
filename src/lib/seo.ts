@@ -9,11 +9,10 @@ export interface PageMeta {
   noIndex?: boolean;
 }
 
-const DEFAULT_TITLE = "YKonline Shop - Natural Organic Premium Shea Butter | USA";
+const DEFAULT_TITLE = "YKonline Shop - Natural Organic Premium Shea Butter | USA & Europe";
 const DEFAULT_DESCRIPTION =
-  "YKonline Shop — Premium organic shea butter shipped across the United States. Based in Maryland, USA. 100% natural skin and hair care with fast US delivery.";
-const DEFAULT_IMAGE =
-  "https://sori-mobile-tire.com/wp-content/uploads/2026/06/YKONLINE-SHOP-LOGO.jpeg";
+  "YKonline Shop — Premium organic shea butter shipped to the United States and Europe. Based in Waldorf, Maryland, USA. 100% natural skin and hair care with fast international delivery.";
+const DEFAULT_IMAGE = `${SITE_URL}/images/ykonline-logo.png`;
 
 function setMetaTag(attr: "name" | "property", key: string, content: string) {
   let el = document.querySelector(`meta[${attr}="${key}"]`);
@@ -35,6 +34,20 @@ function setCanonical(url: string) {
   el.setAttribute("href", url);
 }
 
+function setHreflang(url: string) {
+  const langs = ["en-us", "en-gb", "en", "x-default"] as const;
+  for (const lang of langs) {
+    let el = document.querySelector(`link[rel="alternate"][hreflang="${lang}"]`);
+    if (!el) {
+      el = document.createElement("link");
+      el.setAttribute("rel", "alternate");
+      el.setAttribute("hreflang", lang);
+      document.head.appendChild(el);
+    }
+    el.setAttribute("href", url);
+  }
+}
+
 export function applyPageMeta(meta: PageMeta) {
   const title = meta.title.includes("YKonline") ? meta.title : `${meta.title} | YKonline Shop`;
   const description = meta.description ?? DEFAULT_DESCRIPTION;
@@ -54,12 +67,14 @@ export function applyPageMeta(meta: PageMeta) {
   setMetaTag("property", "og:locale", "en_US");
   setMetaTag("name", "geo.region", "US-MD");
   setMetaTag("name", "geo.placename", "Waldorf, Maryland, United States");
+  setMetaTag("name", "coverage", "United States, Europe");
   setCanonical(url);
+  setHreflang(url);
 
   if (meta.noIndex) {
     setMetaTag("name", "robots", "noindex, nofollow");
   } else {
-    setMetaTag("name", "robots", "index, follow");
+    setMetaTag("name", "robots", "index, follow, max-image-preview:large");
   }
 }
 
