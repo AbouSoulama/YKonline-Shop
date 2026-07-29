@@ -118,7 +118,7 @@ export default function CartDrawer() {
               <div className="flex justify-between text-sm"><span className="text-gray-600">Item</span><span className="font-semibold">{formatPrice(Math.max(0, subtotal - discount))}</span></div>
               {discount > 0 && <div className="flex justify-between text-xs text-green"><span>Discount ({appliedPromo?.code})</span><span className="font-semibold">-{formatPrice(discount)}</span></div>}
               <div className="flex justify-between text-sm"><span className="text-gray-600">Shipping</span><span className="font-semibold text-gray-400">{shipping > 0 ? formatPrice(shipping) : "At checkout"}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-600">Tax (6%)</span><span className="font-semibold">{formatPrice(tax)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-600">Tax collecte</span><span className="font-semibold">{formatPrice(tax)}</span></div>
               <div className="flex justify-between text-lg pt-2 border-t border-cream">
                 <span className="font-display font-semibold">Total</span>
                 <span className="font-display font-bold text-green">{formatPrice(total)}</span>

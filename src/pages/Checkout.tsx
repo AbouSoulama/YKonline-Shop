@@ -204,7 +204,7 @@ export default function Checkout() {
           <Link to="/shop" onClick={() => setIsOpen(false)} className="text-sm text-gray-600 hover:text-green flex items-center gap-1 inline-flex"><ChevronLeft size={16} /> Continue shopping</Link>
           <h1 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mt-3">Checkout</h1>
           <div className="flex items-center gap-2 mt-4 text-sm flex-wrap">
-            {["Delivery", "Shipping", "Payment"].map((l, i) => (
+            {["Information", "Payment", "Confirmer"].map((l, i) => (
               <div key={l} className="flex items-center gap-2">
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step > i + 1 ? "bg-green text-white" : step === i + 1 ? "bg-orange text-white" : "bg-cream text-gray-500"}`}>{step > i + 1 ? <Check size={14} /> : i + 1}</span>
                 <span className={step >= i + 1 ? "text-gray-900 font-semibold" : "text-gray-500"}>{l}</span>
@@ -468,7 +468,7 @@ export default function Checkout() {
               <span className="font-semibold">{activeShipping > 0 ? formatPrice(activeShipping) : "—"}</span>
             </div>
             <div className="flex justify-between">
-              <span>Tax (6%)</span>
+              <span>Tax collecte</span>
               <span className="font-semibold">{formatPrice(tax)}</span>
             </div>
             <div className="flex justify-between text-lg pt-2 border-t border-cream">
