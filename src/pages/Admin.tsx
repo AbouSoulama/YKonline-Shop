@@ -690,8 +690,7 @@ export default function Admin() {
                       <button
                         type="button"
                         onClick={async () => {
-                          const type = o.status === "Pending" ? "created" : "paid";
-                          const result = await notifyOrderPlaced(o.dbId, type);
+                          const result = await notifyOrderPlaced(o.dbId, "paid");
                           alert(result.success
                             ? "Order alert sent to WhatsApp +1 (301) 266-9830"
                             : `Failed to send: ${result.error ?? "unknown error"}`);

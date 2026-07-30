@@ -196,8 +196,19 @@ export default async function handler(req, res) {
     const results = { emailCustomer: false, emailAdmin: false, whatsapp: false, whatsappProvider: "" };
     const errors = [];
 
+    // Only notify after payment (or later status updates) — never on unpaid "created"
+    if (type === "created") {
+      Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
+      return res.status(200).json({
+        success: true,
+        skipped: true,
+        reason: "No notifications for unpaid orders.",
+        ...results,
+      });
+    }
+
     // WhatsApp first — does not depend on Resend
-    if (type === "created" || type === "paid") {
+    if (type === "paid") {
       const wa = await sendAdminWhatsApp(whatsappMsg);
       results.whatsapp = wa.ok;
       results.whatsappProvider = wa.provider ?? "";
@@ -222,17 +233,6 @@ export default async function handler(req, res) {
         );
         results.emailAdmin = adminResult.ok;
         if (!adminResult.ok) errors.push(`admin: ${adminResult.error}`);
-      }
-
-      if (type === "created" && order.customer_email) {
-        const r = await sendEmail(
-          resendKey,
-          [order.customer_email],
-          `Order received — #${order.order_number}`,
-          orderEmailHtml(order, "We received your order!", "Thank you! Complete payment to confirm your order."),
-        );
-        results.emailCustomer = r.ok;
-        if (!r.ok) errors.push(`customer: ${r.error}`);
       }
 
       if (type === "paid" && order.customer_email) {
@@ -267,23 +267,7 @@ export default async function handler(req, res) {
         results.emailCustomer = r.ok;
         if (!r.ok) errors.push(`customer: ${r.error}`);
       }
-
-      if (type === "created") {
-        const adminResult = await sendEmail(
-          resendKey,
-          [ADMIN_EMAIL],
-          `New order (pending) #${order.order_number}`,
-          `<div style="font-family:Arial,sans-serif;padding:24px">
-            <h2 style="color:#0B6623">New order placed (awaiting payment)</h2>
-            <p><strong>#${order.order_number}</strong> — ${order.customer_name} (${order.customer_email})</p>
-            <p>Total: $${Number(order.total).toFixed(2)}</p>
-            <pre style="background:#f5f5f5;padding:12px;border-radius:8px;white-space:pre-wrap">${whatsappMsg}</pre>
-          </div>`,
-        );
-        results.emailAdmin = adminResult.ok;
-        if (!adminResult.ok) errors.push(`admin: ${adminResult.error}`);
-      }
-    } else {
+    } else if (type === "paid" || type === "shipped" || type === "delivered") {
       errors.push("email: RESEND_API_KEY is not configured (WhatsApp still attempted).");
     }
 
