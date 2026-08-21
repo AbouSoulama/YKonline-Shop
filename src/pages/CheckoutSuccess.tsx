@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Loader2, Mail, PackageSearch } from "lucide-react";
+import { Check, Loader2, Mail, MessageCircle, PackageSearch } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { verifyCheckoutSession } from "../lib/payments";
 import { fetchOrderByNumber } from "../lib/orders";
-import { useCart } from "../context/CartContext";
+import { useCart, calcTax } from "../context/CartContext";
 import { useProducts } from "../context/ProductsContext";
 import { usePageMeta } from "../lib/seo";
+import {
+  buildPaidOrderWhatsAppMessage,
+  consumeStoredWhatsAppUrl,
+  getOrderWhatsAppUrl,
+  openOrderWhatsApp,
+} from "../lib/whatsappOrder";
 
 export default function CheckoutSuccess() {
   const [params] = useSearchParams();
@@ -16,6 +22,7 @@ export default function CheckoutSuccess() {
   const [orderNumber, setOrderNumber] = useState(params.get("order") ?? "");
   const [customerEmail, setCustomerEmail] = useState(params.get("email") ?? "");
   const [paid, setPaid] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   usePageMeta({
     title: "Order Confirmed",
@@ -28,20 +35,65 @@ export default function CheckoutSuccess() {
     const sessionId = params.get("session_id");
     const order = params.get("order");
     const emailParam = params.get("email");
+    const fromCheckoutWa = params.get("wa") === "1";
 
     async function verify() {
+      let orderData = null as Awaited<ReturnType<typeof fetchOrderByNumber>>;
+
       if (sessionId) {
         const result = await verifyCheckoutSession(sessionId);
         setPaid(result.paid);
         if (result.paid) clearCart();
-      } else if (order) {
-        const o = await fetchOrderByNumber(order);
-        setPaid(o?.status === "paid" || o?.status === "processing" || o?.status === "shipped" || o?.status === "delivered");
-        if (o?.status === "paid") clearCart();
-        if (o?.customerEmail && !emailParam) setCustomerEmail(o.customerEmail);
       }
-      if (order) setOrderNumber(order);
+
+      if (order) {
+        orderData = await fetchOrderByNumber(order);
+        const isPaid =
+          orderData?.status === "paid" ||
+          orderData?.status === "processing" ||
+          orderData?.status === "shipped" ||
+          orderData?.status === "delivered" ||
+          fromCheckoutWa;
+        setPaid(Boolean(isPaid));
+        if (orderData?.status === "paid") clearCart();
+        if (orderData?.customerEmail && !emailParam) setCustomerEmail(orderData.customerEmail);
+        setOrderNumber(order);
+      }
+
       if (emailParam) setCustomerEmail(emailParam);
+
+      // URL saved when payment succeeded on checkout (already opened once)
+      const stored = consumeStoredWhatsAppUrl();
+      if (stored) {
+        setWhatsappUrl(stored);
+      } else if (orderData) {
+        const itemsSubtotal = orderData.items.reduce((s, i) => s + i.price * i.quantity, 0);
+        const tax = calcTax(itemsSubtotal, 0);
+        const msg = buildPaidOrderWhatsAppMessage({
+          orderNumber: orderData.orderNumber,
+          customerName: orderData.customerName,
+          customerEmail: orderData.customerEmail,
+          items: orderData.items.map((i) => ({
+            name: i.name,
+            quantity: i.quantity,
+            price: i.price,
+            size: i.size,
+          })),
+          subtotal: itemsSubtotal,
+          shippingCost: orderData.shippingCost,
+          tax,
+          total: orderData.total,
+          paymentMethod: orderData.paymentMethod,
+          shippingAddress: orderData.shippingAddress,
+        });
+        const url = getOrderWhatsAppUrl(msg);
+        setWhatsappUrl(url);
+        // Redirect / session flows that didn't open WhatsApp on checkout
+        if (!fromCheckoutWa && (orderData.status === "paid" || orderData.status === "processing")) {
+          openOrderWhatsApp(msg);
+        }
+      }
+
       await refreshProducts();
       setLoading(false);
     }
@@ -90,6 +142,26 @@ export default function CheckoutSuccess() {
           <p className="text-sm text-gray-500 mb-1">Order number</p>
           <p className="font-display font-bold text-xl text-green">#{orderNumber}</p>
           <p className="text-xs text-gray-500 mt-2">Keep this number to track your order later.</p>
+        </div>
+      )}
+
+      {whatsappUrl && (
+        <div className="bg-[#25D366]/10 border border-[#25D366]/30 rounded-3xl p-6 mb-6 text-left">
+          <p className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+            <MessageCircle size={18} className="text-[#25D366]" />
+            Send your order on WhatsApp
+          </p>
+          <p className="text-sm text-gray-600 mb-4">
+            WhatsApp should open with your complete order. If it did not open automatically, tap the button below to send it to the shop.
+          </p>
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold px-6 py-3 rounded-full transition-colors"
+          >
+            <MessageCircle size={18} /> Open WhatsApp
+          </a>
         </div>
       )}
 

@@ -12,6 +12,7 @@ import { US_STATES, isUnitedStates, countryToIso } from "../constants/usStates";
 import { PaymentMethodsBar, CreditCardLogo, PayPalLogo } from "../components/PaymentLogos";
 import CardPayment from "../components/CardPayment";
 import PayPalPayment from "../components/PayPalPayment";
+import { buildPaidOrderWhatsAppMessage, cartItemsToWhatsAppItems, openOrderWhatsApp } from "../lib/whatsappOrder";
 
 type PaymentChoice = "card" | "paypal" | null;
 
@@ -139,6 +140,30 @@ export default function Checkout() {
   });
 
   const handlePaymentSuccess = async () => {
+    const cost = activeShipping;
+    const message = buildPaidOrderWhatsAppMessage({
+      orderNumber: orderInfo?.orderNumber ?? "",
+      customerName: `${form.firstName.trim()} ${form.lastName.trim()}`,
+      customerEmail: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+      items: cartItemsToWhatsAppItems(items),
+      subtotal: itemsNet,
+      discount,
+      shippingCost: cost,
+      tax,
+      total: orderTotal,
+      paymentMethod: paymentChoice === "paypal" ? "paypal" : "stripe",
+      shippingAddress: {
+        address: form.address.trim(),
+        city: form.city.trim(),
+        state: form.state.trim(),
+        postalCode: form.postalCode.trim(),
+        country: form.country.trim(),
+        phone: form.phone.trim(),
+      },
+    });
+    openOrderWhatsApp(message);
+
     if (orderInfo?.orderId) {
       const method = paymentChoice === "paypal" ? "paypal" : "stripe";
       const paid = await markOrderPaid(orderInfo.orderId, undefined, method);
@@ -149,7 +174,7 @@ export default function Checkout() {
     await refreshProducts();
     clearCart();
     const email = encodeURIComponent(form.email.trim().toLowerCase());
-    navigate(`/checkout/success?order=${orderInfo?.orderNumber ?? ""}&email=${email}`);
+    navigate(`/checkout/success?order=${orderInfo?.orderNumber ?? ""}&email=${email}&wa=1`);
   };
 
   const handleContinue = async (e: React.FormEvent) => {
